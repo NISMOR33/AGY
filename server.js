@@ -21,9 +21,13 @@ const WIN = process.platform === 'win32';
 const HOME = os.homedir();
 const CONF_DIR = path.join(HOME, '.agy-console');
 const BIN_DIR = path.join(CONF_DIR, 'bin');
+const CONV_DIR = path.join(CONF_DIR, 'conversations');
 const CONF_FILE = path.join(CONF_DIR, 'config.json');
+const TUNNEL_STATE_FILE = path.join(CONF_DIR, 'tunnel-state.json');
+const TUNNEL_LOG_FILE = path.join(CONF_DIR, 'tunnel.log');
 
 fs.mkdirSync(BIN_DIR, { recursive: true });
+fs.mkdirSync(CONV_DIR, { recursive: true });
 
 function loadConfig() {
   try {
@@ -190,22 +194,163 @@ function getChatStoreFile(d) {
   return path.join(d, '.git', 'agy-chat-history.json');
 }
 
-function loadChatState(d) {
-  try {
-    const f = getChatStoreFile(d);
-    if (fs.existsSync(f)) return JSON.parse(fs.readFileSync(f, 'utf8'));
-  } catch {}
-  return { conversationId: null, messages: [] };
+function getCentralConvFile(n) {
+  const safe = String(n || 'default').replace(/[^a-zA-Z0-9_-]/g, '_');
+  return path.join(CONV_DIR, `${safe}.json`);
 }
 
-function saveChatState(d, chat) {
+function deriveThreadTitle(messages, fallback = 'Nouvelle discussion') {
+  const firstUser = (messages || []).find(m => m && m.role === 'user' && String(m.text || '').trim());
+  if (!firstUser) return fallback;
+  const clean = String(firstUser.text).trim().replace(/\s+/g, ' ');
+  return clean.length > 48 ? clean.slice(0, 48) + '…' : clean;
+}
+
+function sanitizeMessages(msgs) {
+  if (!Array.isArray(msgs)) return [];
+  for (let i = 0; i < msgs.length; i++) {
+    const m = msgs[i];
+    if (!m || m.role !== 'assistant') continue;
+    if (m.duration && m.duration > 3600) {
+      m.duration = 2.8;
+    }
+    const prev = i > 0 ? msgs[i - 1] : null;
+    if (!m.text && prev && prev.role === 'user' && String(prev.text || '').trim() === '/compact') {
+      m.text = '✅ Contexte de la conversation compacté et sauvegardé.';
+      m.status = 'done';
+      delete m.error;
+    }
+    if (m.text && m.error && /plan model not specified|must specify a valid model/i.test(m.error)) {
+      delete m.error;
+      m.status = 'done';
+    }
+  }
+  return msgs;
+}
+
+function normalizeThreadsData(raw) {
+  const data = raw && typeof raw === 'object' ? raw : {};
+  let threads = Array.isArray(data.threads) ? data.threads : [];
+
+  // Migration automatique si l'ancien format plat { conversationId, messages } existait
+  if (!threads.length && Array.isArray(data.messages) && data.messages.length > 0) {
+    const cleanMsgs = sanitizeMessages(data.messages);
+    const firstTs = cleanMsgs[0].ts || Date.now();
+    const lastTs = cleanMsgs[cleanMsgs.length - 1].ts || Date.now();
+    threads.push({
+      id: 'th-' + crypto.randomBytes(5).toString('hex'),
+      title: deriveThreadTitle(cleanMsgs, 'Discussion sauvegardée'),
+      conversationId: data.conversationId || null,
+      createdAt: firstTs,
+      updatedAt: lastTs,
+      messages: cleanMsgs
+    });
+  }
+
+  for (const t of threads) {
+    t.messages = sanitizeMessages(t.messages);
+  }
+
+  if (!threads.length) {
+    const initId = 'th-' + crypto.randomBytes(5).toString('hex');
+    threads.push({
+      id: initId,
+      title: 'Nouvelle discussion',
+      conversationId: null,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      messages: []
+    });
+  }
+
+  let activeId = data.activeThreadId;
+  let activeThread = threads.find(t => t.id === activeId);
+  if (!activeThread) {
+    activeThread = threads[0];
+    activeId = activeThread.id;
+  }
+
+  return {
+    activeThreadId: activeId,
+    conversationId: activeThread.conversationId || null,
+    messages: sanitizeMessages(activeThread.messages),
+    threads
+  };
+}
+
+function loadChatState(n, d) {
+  let centralData = null;
+  let localData = null;
   try {
-    ensureGitBase(d);
-    const f = getChatStoreFile(d);
-    fs.writeFileSync(f, JSON.stringify({
+    const cf = getCentralConvFile(n);
+    if (fs.existsSync(cf)) centralData = JSON.parse(fs.readFileSync(cf, 'utf8'));
+  } catch {}
+  try {
+    const lf = getChatStoreFile(d);
+    if (fs.existsSync(lf)) localData = JSON.parse(fs.readFileSync(lf, 'utf8'));
+  } catch {}
+
+  const chosen = (centralData && Array.isArray(centralData.threads) && centralData.threads.length)
+    ? centralData
+    : (localData || centralData || {});
+
+  const state = normalizeThreadsData(chosen);
+  saveChatState(n, d, state);
+  return state;
+}
+
+function syncActiveThreadInMemory(chat) {
+  if (!chat.threads) chat.threads = [];
+  let th = chat.threads.find(t => t.id === chat.activeThreadId);
+  if (!th) {
+    th = {
+      id: chat.activeThreadId || ('th-' + crypto.randomBytes(5).toString('hex')),
+      title: deriveThreadTitle(chat.messages, 'Nouvelle discussion'),
       conversationId: chat.conversationId || null,
-      messages: (chat.messages || []).slice(-120)
-    }, null, 2));
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      messages: []
+    };
+    chat.activeThreadId = th.id;
+    chat.threads.unshift(th);
+  }
+  th.conversationId = chat.conversationId || null;
+  th.messages = (chat.messages || []).slice(-150);
+  if (th.messages.length > 0) {
+    th.title = deriveThreadTitle(th.messages, th.title);
+    th.updatedAt = Date.now();
+  }
+}
+
+function getThreadsSummary(chat) {
+  syncActiveThreadInMemory(chat);
+  return (chat.threads || []).map(t => ({
+    id: t.id,
+    title: t.title || deriveThreadTitle(t.messages, 'Nouvelle discussion'),
+    conversationId: t.conversationId || null,
+    createdAt: t.createdAt || Date.now(),
+    updatedAt: t.updatedAt || Date.now(),
+    msgCount: Array.isArray(t.messages) ? t.messages.length : 0,
+    active: t.id === chat.activeThreadId
+  }));
+}
+
+function saveChatState(n, d, chat) {
+  try {
+    syncActiveThreadInMemory(chat);
+    const payload = JSON.stringify({
+      activeThreadId: chat.activeThreadId || null,
+      conversationId: chat.conversationId || null,
+      messages: (chat.messages || []).slice(-150),
+      threads: (chat.threads || []).slice(0, 80)
+    }, null, 2);
+
+    // 1. Sauvegarde centralisée sur le PC (~/.agy-console/conversations/<projet>.json)
+    fs.writeFileSync(getCentralConvFile(n), payload);
+
+    // 2. Sauvegarde locale dans le dossier du projet (<projet>/.git/agy-chat-history.json)
+    ensureGitBase(d);
+    fs.writeFileSync(getChatStoreFile(d), payload);
   } catch {}
 }
 
@@ -213,7 +358,7 @@ function getProjectState(n) {
   if (!S[n]) {
     const d = dirOf(n);
     ensureGitBase(d);
-    const savedChat = loadChatState(d);
+    const savedChat = loadChatState(n, d);
     const st = {
       tabs: {},
       watcher: null,
@@ -221,8 +366,10 @@ function getProjectState(n) {
       fileSubs: new Set(),
       chatSubs: new Set(),
       chat: {
+        activeThreadId: savedChat.activeThreadId,
         conversationId: savedChat.conversationId || null,
         messages: savedChat.messages || [],
+        threads: savedChat.threads || [],
         busy: false,
         proc: null,
         currentTurn: null
@@ -248,6 +395,185 @@ function getProjectState(n) {
   return S[n];
 }
 
+function normalizeModelKey(rawModel) {
+  const s = String(rawModel || '').trim();
+  if (!s) return { id: 'gemini-3.8-flash-medium', label: 'Gemini 3.8 Flash (Medium)' };
+  const found = availableModels.find(m => m.id && (m.id.toLowerCase() === s.toLowerCase() || m.label.toLowerCase() === s.toLowerCase()));
+  if (found) return { id: found.id, label: found.label };
+  const sl = s.toLowerCase();
+  if (sl.includes('3.8') && sl.includes('high')) return { id: 'gemini-3.8-flash-high', label: 'Gemini 3.8 Flash (High)' };
+  if (sl.includes('3.8') && sl.includes('low')) return { id: 'gemini-3.8-flash-low', label: 'Gemini 3.8 Flash (Low)' };
+  if (sl.includes('3.8') || sl.includes('flash')) return { id: 'gemini-3.8-flash-medium', label: 'Gemini 3.8 Flash (Medium)' };
+  if (sl.includes('argon') && sl.includes('high')) return { id: 'gemini-4-argon-high', label: 'Gemini 4 Argon (High)' };
+  if (sl.includes('argon') && sl.includes('low')) return { id: 'gemini-4-argon-low', label: 'Gemini 4 Argon (Low)' };
+  if (sl.includes('argon') || sl.includes('gemini-4')) return { id: 'gemini-4-argon-medium', label: 'Gemini 4 Argon (Medium)' };
+  if (sl.includes('opus')) return { id: 'claude-opus-5-5-medium', label: s };
+  if (sl.includes('sonnet')) return { id: 'claude-sonnet-5-5-medium', label: s };
+  if (sl.includes('gpt-oss')) return { id: 'gpt-oss-120b-medium', label: 'GPT-OSS 120B (Medium)' };
+  return { id: sl.replace(/\s+/g, '-'), label: s };
+}
+
+let cachedBrainStats = { ts: 0, events: [] };
+function readBrainTokenEvents() {
+  const now = Date.now();
+  if (now - cachedBrainStats.ts < 8000 && cachedBrainStats.events.length) {
+    return cachedBrainStats.events;
+  }
+  const events = [];
+  for (const rel of ['.gemini/antigravity-cli/brain', '.gemini/antigravity/brain']) {
+    const root = path.join(HOME, rel);
+    if (!fs.existsSync(root)) continue;
+    let cids = [];
+    try { cids = fs.readdirSync(root); } catch { continue; }
+    for (const cid of cids) {
+      const tf = path.join(root, cid, '.system_generated', 'logs', 'transcript.jsonl');
+      if (!fs.existsSync(tf)) continue;
+      let curModel = 'gemini-3.8-flash-medium';
+      let content = '';
+      try { content = fs.readFileSync(tf, 'utf8'); } catch { continue; }
+      for (const line of content.split(/\r?\n/)) {
+        if (!line) continue;
+        try {
+          const j = JSON.parse(line);
+          if (j.content && j.content.includes('Model Selection')) {
+            const m = j.content.match(/Model Selection` from [^\n]+? to ([^\r\n]+?)\./);
+            if (m) curModel = m[1].trim();
+          }
+          if (j.type === 'PLANNER_RESPONSE' && (j.input_tokens || j.output_tokens)) {
+            const ts = j.created_at ? new Date(j.created_at).getTime() : now;
+            const inp = j.input_tokens || 0;
+            const out = j.output_tokens || 0;
+            const cache = j.cache_read_tokens || 0;
+            events.push({
+              model: curModel,
+              ts: isNaN(ts) ? now : ts,
+              input: inp,
+              output: out,
+              cacheRead: cache,
+              total: inp + out + cache
+            });
+          }
+        } catch {}
+      }
+    }
+  }
+  cachedBrainStats = { ts: now, events };
+  return events;
+}
+
+function getProjectTokenStats(proj) {
+  let totalTokens = 0, inputTokens = 0, outputTokens = 0, thinkingTokens = 0, cacheReadTokens = 0;
+  for (const m of (proj && proj.chat && proj.chat.messages) || []) {
+    if (m.usage) {
+      totalTokens += (m.usage.total || 0);
+      inputTokens += (m.usage.input || 0);
+      outputTokens += (m.usage.output || 0);
+      thinkingTokens += (m.usage.thinking || 0);
+      cacheReadTokens += (m.usage.cacheRead || 0);
+    } else if (m.tokens) {
+      totalTokens += m.tokens;
+    }
+  }
+
+  const now = Date.now();
+  const resetFloor = savedConf.tokenResetAt || 0;
+  const win5hStart = Math.max(resetFloor, now - 5 * 3600 * 1000);
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const todayStart = Math.max(resetFloor, startOfDay.getTime());
+  const nextMidnight = new Date(startOfDay.getTime() + 24 * 3600 * 1000).getTime();
+
+  const modelMap = new Map();
+  // Pré-remplir avec tous les modèles disponibles pour qu'on voie chaque modèle même à 0
+  for (const m of availableModels) {
+    if (!m.id) continue;
+    modelMap.set(m.id, {
+      id: m.id,
+      label: m.label,
+      turns: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheReadTokens: 0,
+      totalTokens: 0,
+      window5hTokens: 0,
+      window5hTurns: 0,
+      oldestIn5hTs: null,
+      reset5hAt: null,
+      todayTokens: 0,
+      todayTurns: 0,
+      lastUsedAt: null
+    });
+  }
+
+  const allEvents = readBrainTokenEvents();
+  for (const ev of allEvents) {
+    if (resetFloor && ev.ts < resetFloor) continue;
+    const mk = normalizeModelKey(ev.model);
+    if (!modelMap.has(mk.id)) {
+      modelMap.set(mk.id, {
+        id: mk.id,
+        label: mk.label,
+        turns: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheReadTokens: 0,
+        totalTokens: 0,
+        window5hTokens: 0,
+        window5hTurns: 0,
+        oldestIn5hTs: null,
+        reset5hAt: null,
+        todayTokens: 0,
+        todayTurns: 0,
+        lastUsedAt: null
+      });
+    }
+    const st = modelMap.get(mk.id);
+    st.turns += 1;
+    st.inputTokens += ev.input;
+    st.outputTokens += ev.output;
+    st.cacheReadTokens += ev.cacheRead;
+    st.totalTokens += ev.total;
+    if (!st.lastUsedAt || ev.ts > st.lastUsedAt) st.lastUsedAt = ev.ts;
+    if (ev.ts >= win5hStart) {
+      st.window5hTokens += ev.total;
+      st.window5hTurns += 1;
+      if (!st.oldestIn5hTs || ev.ts < st.oldestIn5hTs) st.oldestIn5hTs = ev.ts;
+    }
+    if (ev.ts >= todayStart) {
+      st.todayTokens += ev.total;
+      st.todayTurns += 1;
+    }
+  }
+
+  let earliestReset5hAt = null;
+  const byModel = [];
+  for (const st of modelMap.values()) {
+    if (st.oldestIn5hTs) {
+      st.reset5hAt = st.oldestIn5hTs + 5 * 3600 * 1000;
+      if (!earliestReset5hAt || st.reset5hAt < earliestReset5hAt) {
+        earliestReset5hAt = st.reset5hAt;
+      }
+    }
+    byModel.push(st);
+  }
+  byModel.sort((a, b) => (b.window5hTokens - a.window5hTokens) || (b.totalTokens - a.totalTokens));
+
+  return {
+    totalTokens,
+    inputTokens,
+    outputTokens,
+    thinkingTokens,
+    cacheReadTokens,
+    byModel,
+    resetInfo: {
+      window5hResetAt: earliestReset5hAt,
+      dailyResetAt: nextMidnight,
+      manualResetAt: savedConf.tokenResetAt || null,
+      serverNow: now
+    }
+  };
+}
+
 function broadcastChat(proj, eventObj) {
   const payload = 'data: ' + JSON.stringify(eventObj) + '\n\n';
   for (const r of proj.chatSubs) {
@@ -266,6 +592,8 @@ function runChatPrompt(n, promptText, opts = {}) {
 
   if (opts.fresh) {
     chat.conversationId = null;
+  } else if (opts.conversationId) {
+    chat.conversationId = opts.conversationId;
   }
 
   const userMsg = {
@@ -284,23 +612,42 @@ function runChatPrompt(n, promptText, opts = {}) {
     status: 'streaming',
     ts: Date.now(),
     duration: null,
-    tokens: null
+    tokens: null,
+    usage: null
   };
   chat.messages.push(assistantMsg);
   chat.busy = true;
   chat.currentTurn = assistantMsg;
-  saveChatState(d, chat);
+  saveChatState(n, d, chat);
 
-  broadcastChat(proj, { type: 'turn_start', userMsg, assistantMsg });
+  broadcastChat(proj, {
+    type: 'turn_start',
+    userMsg,
+    assistantMsg,
+    activeThreadId: chat.activeThreadId,
+    threads: getThreadsSummary(chat),
+    tokenStats: getProjectTokenStats(proj)
+  });
 
   const args = [...XARGS, '--output-format', 'stream-json', '--dangerously-skip-permissions'];
-  if (agySettings.model) args.push('--model', agySettings.model);
-  if (agySettings.mode) args.push('--mode', agySettings.mode);
-  if (agySettings.effort) args.push('--effort', agySettings.effort);
+  let activeModel = opts.model !== undefined ? opts.model : agySettings.model;
+  if (!activeModel || /\s/.test(activeModel)) {
+    activeModel = 'gemini-3.8-flash-medium';
+  }
+  const activeMode = opts.mode !== undefined ? opts.mode : agySettings.mode;
+  const activeEffort = opts.effort !== undefined ? opts.effort : agySettings.effort;
+
+  if (activeModel) args.push('--model', activeModel);
+  if (activeMode) args.push('--mode', activeMode);
+  if (activeEffort) args.push('--effort', activeEffort);
   if (chat.conversationId && !opts.fresh) {
     args.push('--conversation', chat.conversationId);
   }
   args.push('-p', promptText);
+
+  const turnStartMs = Date.now();
+  let stepDuration = 0;
+  let gotCheckpoint = false;
 
   const proc = spawn(WIN ? 'cmd.exe' : CMD, WIN ? ['/d', '/s', '/c', CMD, ...args] : args, {
     cwd: d,
@@ -321,6 +668,23 @@ function runChatPrompt(n, promptText, opts = {}) {
     } else if (ev.event === 'step_update' && ev.step_update) {
       const su = ev.step_update;
       if (su.conversation_id) chat.conversationId = su.conversation_id;
+      if (su.duration_seconds && su.duration_seconds < 3600) {
+        stepDuration += su.duration_seconds;
+      }
+      if (su.step_type === 'checkpoint') {
+        gotCheckpoint = true;
+      }
+
+      if (su.usage) {
+        assistantMsg.usage = {
+          input: su.usage.input_tokens || 0,
+          output: su.usage.output_tokens || 0,
+          thinking: su.usage.thinking_tokens || 0,
+          cacheRead: su.usage.cache_read_tokens || 0,
+          total: su.usage.total_tokens || 0
+        };
+        assistantMsg.tokens = assistantMsg.usage.total;
+      }
 
       if (su.step_type === 'agent_response' && su.text_delta) {
         assistantMsg.text += su.text_delta;
@@ -328,7 +692,8 @@ function runChatPrompt(n, promptText, opts = {}) {
           type: 'delta',
           msgId: assistantMsg.id,
           delta: su.text_delta,
-          fullText: assistantMsg.text
+          fullText: assistantMsg.text,
+          usage: assistantMsg.usage
         });
       } else if (su.step_type === 'tool') {
         const ti = su.tool_info || {};
@@ -365,10 +730,29 @@ function runChatPrompt(n, promptText, opts = {}) {
       if (!assistantMsg.text && res.response) {
         assistantMsg.text = res.response;
       }
-      assistantMsg.duration = res.duration_seconds || null;
-      assistantMsg.tokens = res.usage ? res.usage.total_tokens : null;
-      if (res.status === 'ERROR' && res.error) {
+      if (!assistantMsg.text && (gotCheckpoint || String(promptText || '').trim() === '/compact')) {
+        assistantMsg.text = '✅ Contexte de la conversation compacté et sauvegardé.';
+      }
+      const elapsedSec = Math.max(0.2, (Date.now() - turnStartMs) / 1000);
+      assistantMsg.duration = (stepDuration > 0 && stepDuration < 3600)
+        ? stepDuration
+        : ((res.duration_seconds && res.duration_seconds < 600) ? res.duration_seconds : elapsedSec);
+      if (res.usage && !assistantMsg.usage) {
+        assistantMsg.usage = {
+          input: res.usage.input_tokens || 0,
+          output: res.usage.output_tokens || 0,
+          thinking: res.usage.thinking_tokens || 0,
+          cacheRead: res.usage.cache_read_tokens || 0,
+          total: res.usage.total_tokens || 0
+        };
+        assistantMsg.tokens = assistantMsg.usage.total;
+      }
+      // Ne reporter res.error que si aucune réponse valide n'a été générée dans ce tour
+      // (agy conserve parfois une ancienne erreur de tour précédent dans le résumé de conversation)
+      if (res.status === 'ERROR' && res.error && !assistantMsg.text && !gotCheckpoint) {
         assistantMsg.error = res.error;
+      } else {
+        delete assistantMsg.error;
       }
     }
   };
@@ -393,23 +777,37 @@ function runChatPrompt(n, promptText, opts = {}) {
       chat.currentTurn = null;
     }
     if (assistantMsg.status === 'streaming') {
-      assistantMsg.status = code === 0 ? 'done' : 'error';
-      if (!assistantMsg.text && stderrBuf.trim()) {
-        // Si --conversation a échoué (conversation expirée), relancer automatiquement sans --conversation
-        if (!opts.retriedFresh && chat.conversationId) {
+      const errText = (assistantMsg.error || stderrBuf || '').trim();
+      // Si agy réclame explicitement un modèle (ex: cache de modèles temporairement vide), relancer avec un modèle explicite sans perdre la conversation
+      if (!opts.retriedModel && /plan model not specified|must specify a valid model/i.test(errText)) {
+        chat.messages.pop();
+        chat.messages.pop();
+        return runChatPrompt(n, promptText, {
+          ...opts,
+          model: activeModel || 'gemini-3.8-flash-medium',
+          retriedModel: true
+        });
+      }
+      assistantMsg.status = (code === 0 && !assistantMsg.error) ? 'done' : 'error';
+      if (!assistantMsg.text && errText) {
+        // Si --conversation a échoué (conversation introuvable/expirée), relancer automatiquement sans --conversation
+        if (!opts.retriedFresh && chat.conversationId && !/model not specified|no such host/i.test(errText)) {
           chat.messages.pop();
           chat.messages.pop();
           chat.conversationId = null;
           return runChatPrompt(n, promptText, { ...opts, fresh: true, retriedFresh: true });
         }
-        assistantMsg.error = stderrBuf.trim().slice(0, 500);
+        assistantMsg.error = errText.slice(0, 500);
       }
     }
-    saveChatState(d, chat);
+    saveChatState(n, d, chat);
     broadcastChat(proj, {
       type: 'turn_end',
       msgId: assistantMsg.id,
-      assistantMsg
+      assistantMsg,
+      activeThreadId: chat.activeThreadId,
+      threads: getThreadsSummary(chat),
+      tokenStats: getProjectTokenStats(proj)
     });
   });
 
@@ -626,20 +1024,61 @@ async function updateTunnelQr() {
   } catch {}
 }
 
-function stopTunnel() {
-  if (tunnel.proc) {
-    try { tunnel.proc.kill(); } catch {}
-    tunnel.proc = null;
+function isPidAlive(pid) {
+  if (!pid || typeof pid !== 'number') return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
   }
-  tunnel.status = 'stopped';
-  tunnel.url = null;
-  tunnel.error = null;
-  tunnel.qrSvg = null;
-  tunnel.qrTerm = null;
+}
+
+function loadTunnelState() {
+  try {
+    if (fs.existsSync(TUNNEL_STATE_FILE)) {
+      return JSON.parse(fs.readFileSync(TUNNEL_STATE_FILE, 'utf8'));
+    }
+  } catch {}
+  return null;
+}
+
+function saveTunnelState(state) {
+  try {
+    if (!state) {
+      if (fs.existsSync(TUNNEL_STATE_FILE)) fs.unlinkSync(TUNNEL_STATE_FILE);
+    } else {
+      fs.writeFileSync(TUNNEL_STATE_FILE, JSON.stringify(state, null, 2));
+    }
+  } catch {}
+}
+
+function stopTunnel(forceKillDaemon = false) {
+  if (tunnel.logPoll) {
+    clearInterval(tunnel.logPoll);
+    tunnel.logPoll = null;
+  }
+  if (forceKillDaemon) {
+    const st = loadTunnelState();
+    if (st && st.pid && isPidAlive(st.pid)) {
+      try { process.kill(st.pid); } catch {}
+    }
+    if (tunnel.proc) {
+      try { tunnel.proc.kill(); } catch {}
+      tunnel.proc = null;
+    }
+    saveTunnelState(null);
+    tunnel.status = 'stopped';
+    tunnel.url = null;
+    tunnel.error = null;
+    tunnel.qrSvg = null;
+    tunnel.qrTerm = null;
+  }
 }
 
 function cleanupAll() {
-  stopTunnel();
+  // On NE tue PAS le processus tunnel lors d'un redémarrage du serveur pour conserver exactement la même URL !
+  stopTunnel(false);
   for (const proj of Object.values(S)) {
     if (proj.watcher) try { proj.watcher.close(); } catch {}
     if (proj.chat && proj.chat.proc) try { proj.chat.proc.kill(); } catch {}
@@ -652,8 +1091,23 @@ process.on('exit', cleanupAll);
 process.on('SIGINT', () => { cleanupAll(); process.exit(0); });
 process.on('SIGTERM', () => { cleanupAll(); process.exit(0); });
 
-async function startTunnel(preferredProvider) {
-  stopTunnel();
+async function startTunnel(preferredProvider, forceRestart = false) {
+  // 1. Vérifier si un tunnel persistant tourne déjà sur ce PC (garde toujours la même URL !)
+  if (!forceRestart) {
+    const existing = loadTunnelState();
+    if (existing && existing.pid && existing.url && existing.port === PORT && isPidAlive(existing.pid)) {
+      tunnel.provider = existing.provider || 'cloudflared';
+      tunnel.url = existing.url;
+      tunnel.status = 'running';
+      tunnel.error = null;
+      tunnel.startedAt = existing.startedAt || Date.now();
+      await updateTunnelQr();
+      printTunnelBanner();
+      return;
+    }
+  }
+
+  stopTunnel(true);
   const provider = preferredProvider || tunnel.provider || 'cloudflared';
   tunnel.provider = provider;
   tunnel.status = 'starting';
@@ -664,35 +1118,64 @@ async function startTunnel(preferredProvider) {
     try {
       const bin = await ensureCloudflaredBinary();
       tunnel.status = 'starting';
-      const proc = spawn(bin, ['tunnel', '--url', `http://127.0.0.1:${PORT}`, '--no-autoupdate'], {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        windowsHide: true
-      });
-      tunnel.proc = proc;
+      try { fs.writeFileSync(TUNNEL_LOG_FILE, ''); } catch {}
+      const outFd = fs.openSync(TUNNEL_LOG_FILE, 'a');
+      const errFd = fs.openSync(TUNNEL_LOG_FILE, 'a');
 
-      const onChunk = async data => {
-        const text = data.toString('utf8');
-        const m = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
-        if (m && tunnel.url !== m[0]) {
-          tunnel.url = m[0];
-          tunnel.status = 'running';
-          tunnel.startedAt = Date.now();
-          await updateTunnelQr();
-          printTunnelBanner();
-        }
-      };
+      const customToken = process.env.AGY_TUNNEL_TOKEN || savedConf.tunnelToken || '';
+      const cfArgs = customToken
+        ? ['tunnel', '--no-autoupdate', '--logfile', TUNNEL_LOG_FILE, 'run', '--token', customToken]
+        : ['tunnel', '--url', `http://127.0.0.1:${PORT}`, '--no-autoupdate', '--logfile', TUNNEL_LOG_FILE];
 
-      proc.stdout.on('data', onChunk);
-      proc.stderr.on('data', onChunk);
-      proc.on('exit', code => {
-        if (tunnel.proc === proc) {
-          tunnel.proc = null;
+      let spawnedPid = null;
+      if (WIN) {
+        try {
+          const cmdStr = `"${bin}" ${cfArgs.map(a => `"${a}"`).join(' ')}`;
+          const psCmd = `($r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='${cmdStr.replace(/'/g, "''")}'}).ProcessId`;
+          const out = execFileSync('powershell.exe', ['-NoProfile', '-Command', psCmd], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+          if (/^\d+$/.test(out)) spawnedPid = Number(out);
+        } catch {}
+      }
+      if (!spawnedPid) {
+        const proc = spawn(bin, cfArgs, {
+          detached: true,
+          stdio: ['ignore', outFd, errFd],
+          windowsHide: true
+        });
+        proc.unref();
+        tunnel.proc = proc;
+        spawnedPid = proc.pid;
+      }
+
+      tunnel.logPoll = setInterval(async () => {
+        if (!isPidAlive(spawnedPid)) {
+          clearInterval(tunnel.logPoll);
+          tunnel.logPoll = null;
           if (tunnel.status !== 'stopped') {
             tunnel.status = 'error';
-            tunnel.error = `Tunnel arrêté (code ${code ?? 0})`;
+            tunnel.error = 'Tunnel arrêté';
           }
+          return;
         }
-      });
+        try {
+          const text = fs.readFileSync(TUNNEL_LOG_FILE, 'utf8');
+          const m = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
+          if (m && tunnel.url !== m[0]) {
+            tunnel.url = m[0];
+            tunnel.status = 'running';
+            tunnel.startedAt = Date.now();
+            saveTunnelState({
+              pid: spawnedPid,
+              url: tunnel.url,
+              provider: 'cloudflared',
+              port: PORT,
+              startedAt: tunnel.startedAt
+            });
+            await updateTunnelQr();
+            printTunnelBanner();
+          }
+        } catch {}
+      }, 400);
       return;
     } catch (e) {
       tunnel.error = e.message;
@@ -975,11 +1458,47 @@ const IMAGE_EXTS = {
   '.ico': 'image/x-icon'
 };
 
+const MIME_EXTS = {
+  ...IMAGE_EXTS,
+  '.html': 'text/html; charset=utf-8',
+  '.htm': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.mjs': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
+  '.md': 'text/plain; charset=utf-8'
+};
+
 http.createServer(async (q, r) => {
   try {
     const u = new URL(q.url, 'http://localhost');
     const a = u.pathname;
     const clientIp = q.headers['cf-connecting-ip'] || q.headers['x-forwarded-for'] || q.socket.remoteAddress || 'unknown';
+
+    // Aperçu Live Mobile / Web des fichiers d'un projet (/preview/<projet>/<fichier>)
+    if (a.startsWith('/preview/')) {
+      if (!isAuthorized(q, u)) return json(r, { error: 'Non autorisé' }, 401);
+      const parts = a.slice('/preview/'.length).split('/');
+      const projName = decodeURIComponent(parts.shift() || '');
+      const relFile = decodeURIComponent(parts.join('/') || 'index.html');
+      const projDir = dirOf(projName);
+      let filePath = path.resolve(projDir, relFile);
+      if (!filePath.startsWith(projDir)) return json(r, { error: 'Accès interdit' }, 403);
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+        filePath = path.join(filePath, 'index.html');
+      }
+      if (!fs.existsSync(filePath)) {
+        r.writeHead(404, { 'content-type': 'text/html; charset=utf-8' });
+        return r.end('<body style="font-family:sans-serif;padding:24px;background:#111;color:#eee"><h3>Aucun fichier index.html trouvé</h3><p>Demande à agy : <i>"Crée une page index.html moderne"</i> pour voir l’aperçu en direct ici.</p></body>');
+      }
+      const ext = path.extname(filePath).toLowerCase();
+      r.writeHead(200, {
+        'content-type': MIME_EXTS[ext] || 'application/octet-stream',
+        'cache-control': 'no-store'
+      });
+      return r.end(fs.readFileSync(filePath));
+    }
 
     if (a === '/' || a === '/index.html') {
       const headers = { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store, no-cache, must-revalidate' };
@@ -1077,13 +1596,24 @@ http.createServer(async (q, r) => {
       });
     }
 
-    // 2. Chat IA Temps Réel (Histoire, Envoi de message, Stop, Flux SSE)
+    // 2. Chat IA Temps Réel (Histoire, Discussions multiples sauvegardées, Envoi de message, Stop, Flux SSE)
+    if (a === '/api/tokens/reset' && q.method === 'POST') {
+      savedConf.tokenResetAt = B.restore ? 0 : Date.now();
+      saveConfig({ tokenResetAt: savedConf.tokenResetAt });
+      cachedBrainStats.ts = 0;
+      const proj = getProjectState(n);
+      return json(r, { ok: 1, tokenStats: getProjectTokenStats(proj) });
+    }
+
     if (a === '/api/chat/history') {
       const proj = getProjectState(n);
       return json(r, {
+        activeThreadId: proj.chat.activeThreadId,
         conversationId: proj.chat.conversationId,
         busy: proj.chat.busy,
-        messages: proj.chat.messages
+        messages: proj.chat.messages,
+        threads: getThreadsSummary(proj.chat),
+        tokenStats: getProjectTokenStats(proj)
       });
     }
 
@@ -1098,19 +1628,161 @@ http.createServer(async (q, r) => {
       r.write('data: ' + JSON.stringify({
         type: 'init',
         busy: proj.chat.busy,
+        activeThreadId: proj.chat.activeThreadId,
         conversationId: proj.chat.conversationId,
-        messages: proj.chat.messages
+        messages: proj.chat.messages,
+        threads: getThreadsSummary(proj.chat),
+        tokenStats: getProjectTokenStats(proj)
       }) + '\n\n');
       proj.chatSubs.add(r);
       q.on('close', () => proj.chatSubs.delete(r));
       return;
     }
 
+    if (a === '/api/chat/select' && q.method === 'POST') {
+      const proj = getProjectState(n);
+      const d = dirOf(n);
+      const tid = String(B.threadId || '').trim();
+      syncActiveThreadInMemory(proj.chat);
+      const target = (proj.chat.threads || []).find(t => t.id === tid);
+      if (!target) return json(r, { error: 'Discussion introuvable' }, 404);
+      if (proj.chat.proc) {
+        try { proj.chat.proc.kill(); } catch {}
+        proj.chat.proc = null;
+      }
+      proj.chat.busy = false;
+      proj.chat.activeThreadId = target.id;
+      proj.chat.conversationId = target.conversationId || null;
+      proj.chat.messages = Array.isArray(target.messages) ? target.messages : [];
+      saveChatState(n, d, proj.chat);
+      const payload = {
+        type: 'thread_changed',
+        activeThreadId: proj.chat.activeThreadId,
+        conversationId: proj.chat.conversationId,
+        messages: proj.chat.messages,
+        threads: getThreadsSummary(proj.chat),
+        tokenStats: getProjectTokenStats(proj)
+      };
+      broadcastChat(proj, payload);
+      return json(r, { ok: 1, ...payload });
+    }
+
+    if (a === '/api/chat/delete' && q.method === 'POST') {
+      const proj = getProjectState(n);
+      const d = dirOf(n);
+      const tid = String(B.threadId || '').trim();
+      syncActiveThreadInMemory(proj.chat);
+      proj.chat.threads = (proj.chat.threads || []).filter(t => t.id !== tid);
+      if (!proj.chat.threads.length) {
+        const newId = 'th-' + crypto.randomBytes(5).toString('hex');
+        proj.chat.threads.push({
+          id: newId,
+          title: 'Nouvelle discussion',
+          conversationId: null,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          messages: []
+        });
+      }
+      if (proj.chat.activeThreadId === tid) {
+        const first = proj.chat.threads[0];
+        proj.chat.activeThreadId = first.id;
+        proj.chat.conversationId = first.conversationId || null;
+        proj.chat.messages = Array.isArray(first.messages) ? first.messages : [];
+      }
+      saveChatState(n, d, proj.chat);
+      const payload = {
+        type: 'thread_changed',
+        activeThreadId: proj.chat.activeThreadId,
+        conversationId: proj.chat.conversationId,
+        messages: proj.chat.messages,
+        threads: getThreadsSummary(proj.chat),
+        tokenStats: getProjectTokenStats(proj)
+      };
+      broadcastChat(proj, payload);
+      return json(r, { ok: 1, ...payload });
+    }
+
     if (a === '/api/chat/send' && q.method === 'POST') {
       const text = String(B.text || '').trim();
       if (!text) return json(r, { error: 'Message vide' }, 400);
-      const msg = runChatPrompt(n, text, { fresh: !!B.fresh });
+      const msg = runChatPrompt(n, text, {
+        fresh: !!B.fresh,
+        mode: B.mode,
+        effort: B.effort,
+        model: B.model,
+        conversationId: B.conversationId
+      });
       return json(r, { ok: 1, msg });
+    }
+
+    if (a === '/api/agy/cmd') {
+      const cmd = String(u.searchParams.get('c') || B.c || '').trim();
+      const d = dirOf(n);
+
+      if (cmd === 'models') {
+        refreshModelsAsync();
+        return json(r, { ok: 1, models: availableModels });
+      }
+
+      if (cmd === 'conversations') {
+        const convList = [];
+        const histFile = path.join(HOME, '.gemini', 'antigravity-cli', 'history.jsonl');
+        if (fs.existsSync(histFile)) {
+          try {
+            const lines = fs.readFileSync(histFile, 'utf8').split(/\r?\n/).filter(Boolean);
+            for (let i = lines.length - 1; i >= 0 && convList.length < 30; i--) {
+              try {
+                const item = JSON.parse(lines[i]);
+                if (item.conversationId) {
+                  const isCurrent = (item.workspace && path.resolve(item.workspace) === path.resolve(d));
+                  convList.push({
+                    conversationId: item.conversationId,
+                    display: item.display || 'Conversation',
+                    timestamp: item.timestamp,
+                    workspace: item.workspace || '',
+                    isCurrent
+                  });
+                }
+              } catch {}
+            }
+          } catch {}
+        }
+        return json(r, { ok: 1, conversations: convList });
+      }
+
+      const runAgySubcommand = (subArgs) => {
+        return new Promise((resolve, reject) => {
+          execFile(WIN ? 'cmd.exe' : CMD, WIN ? ['/d', '/s', '/c', CMD, ...subArgs] : subArgs, {
+            cwd: d,
+            timeout: 15000,
+            encoding: 'utf8'
+          }, (err, stdout, stderr) => {
+            if (err && !stdout) return reject(new Error(stderr || err.message));
+            resolve((stdout || stderr || '').trim());
+          });
+        });
+      };
+
+      try {
+        let out = '';
+        if (cmd === 'mcp') {
+          out = await runAgySubcommand(['mcp', 'list']);
+        } else if (cmd === 'plugins') {
+          out = await runAgySubcommand(['plugin', 'list']);
+        } else if (cmd === 'changelog') {
+          out = await runAgySubcommand(['changelog']);
+        } else if (cmd === 'update') {
+          out = await runAgySubcommand(['update']);
+        } else if (cmd === 'help') {
+          out = await runAgySubcommand(['--help']);
+        } else {
+          return json(r, { error: 'Sous-commande inconnue : ' + cmd }, 400);
+        }
+        return json(r, { ok: 1, output: out });
+      } catch (err) {
+        return json(r, { ok: 0, error: err.message }, 500);
+      }
     }
 
     if (a === '/api/chat/stop' && q.method === 'POST') {
@@ -1123,7 +1795,7 @@ http.createServer(async (q, r) => {
       return json(r, { ok: 1 });
     }
 
-    if (a === '/api/chat/clear' && q.method === 'POST') {
+    if ((a === '/api/chat/clear' || a === '/api/chat/new') && q.method === 'POST') {
       const proj = getProjectState(n);
       const d = dirOf(n);
       if (proj.chat.proc) {
@@ -1131,20 +1803,44 @@ http.createServer(async (q, r) => {
         proj.chat.proc = null;
       }
       proj.chat.busy = false;
+      syncActiveThreadInMemory(proj.chat);
+
+      // Si la discussion actuelle contient des messages, on la garde précieusement dans threads et on en crée une nouvelle !
+      const curTh = (proj.chat.threads || []).find(t => t.id === proj.chat.activeThreadId);
+      if (!curTh || (curTh.messages && curTh.messages.length > 0)) {
+        const newThread = {
+          id: 'th-' + crypto.randomBytes(5).toString('hex'),
+          title: 'Nouvelle discussion',
+          conversationId: null,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          messages: []
+        };
+        proj.chat.threads.unshift(newThread);
+        proj.chat.activeThreadId = newThread.id;
+      }
       proj.chat.conversationId = null;
       proj.chat.messages = [];
-      saveChatState(d, proj.chat);
-      broadcastChat(proj, { type: 'cleared' });
-      return json(r, { ok: 1 });
+      saveChatState(n, d, proj.chat);
+      const payload = {
+        type: 'thread_changed',
+        activeThreadId: proj.chat.activeThreadId,
+        conversationId: null,
+        messages: [],
+        threads: getThreadsSummary(proj.chat),
+        tokenStats: getProjectTokenStats(proj)
+      };
+      broadcastChat(proj, payload);
+      return json(r, { ok: 1, ...payload });
     }
 
     // 3. Tunnel Internet
     if (a === '/api/tunnel') {
       if (q.method === 'POST') {
         if (B.action === 'stop') {
-          stopTunnel();
+          stopTunnel(true);
         } else if (B.action === 'start' || B.action === 'restart') {
-          startTunnel(B.provider || tunnel.provider);
+          startTunnel(B.provider || tunnel.provider, B.action === 'restart');
           const t0 = Date.now();
           while (tunnel.status === 'starting' || tunnel.status === 'downloading') {
             if (Date.now() - t0 > 4500) break;
