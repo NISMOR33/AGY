@@ -1,0 +1,14 @@
+{
+  "name": "agy-console",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "local": "node server.js --no-tunnel",
+    "new-token": "node server.js --new-token"
+  },
+  "dependencies": {
+    "@lydell/node-pty": "^1.1.0",
+    "qrcode": "^1.5.4"
+  }
+}

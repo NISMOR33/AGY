@@ -1,0 +1,2101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.json">
+<title>agy console</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/xterm/5.3.0/xterm.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/5.3.0/xterm.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xterm-addon-fit/0.8.0/xterm-addon-fit.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #f6f5f2;
+  --bg2: #ffffff;
+  --pn: rgba(255, 255, 255, 0.88);
+  --card: #ffffff;
+  --ln: #e4e2dd;
+  --ln2: #d5d2cb;
+  --tx: #161615;
+  --tx2: #4a4843;
+  --dm: #7c7870;
+  --or: #ea580c;
+  --or2: #f97316;
+  --or-bg: rgba(234, 88, 12, 0.1);
+  --gr: #16a34a;
+  --gr-bg: rgba(22, 163, 74, 0.1);
+  --rd: #dc2626;
+  --rd-bg: rgba(220, 38, 38, 0.1);
+  --bl: #2563eb;
+  --ab: #dcfce7;
+  --db: #fee2e2;
+  --hv: #efede8;
+  --sh: 0 4px 20px rgba(0, 0, 0, 0.06);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme=light]) {
+    --bg: #0b0c0e;
+    --bg2: #111317;
+    --pn: rgba(18, 20, 24, 0.86);
+    --card: #15181e;
+    --ln: #232730;
+    --ln2: #2f3542;
+    --tx: #f3f4f6;
+    --tx2: #c5c8d1;
+    --dm: #7e8594;
+    --or: #ff7a2f;
+    --or2: #ff9454;
+    --or-bg: rgba(255, 122, 47, 0.14);
+    --gr: #34d399;
+    --gr-bg: rgba(52, 211, 153, 0.13);
+    --rd: #f87171;
+    --rd-bg: rgba(248, 113, 113, 0.14);
+    --bl: #60a5fa;
+    --ab: rgba(16, 185, 129, 0.16);
+    --db: rgba(239, 68, 68, 0.18);
+    --hv: #1d212a;
+    --sh: 0 8px 30px rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+  }
+}
+:root[data-theme=dark] {
+  --bg: #0b0c0e;
+  --bg2: #111317;
+  --pn: rgba(18, 20, 24, 0.86);
+  --card: #15181e;
+  --ln: #232730;
+  --ln2: #2f3542;
+  --tx: #f3f4f6;
+  --tx2: #c5c8d1;
+  --dm: #7e8594;
+  --or: #ff7a2f;
+  --or2: #ff9454;
+  --or-bg: rgba(255, 122, 47, 0.14);
+  --gr: #34d399;
+  --gr-bg: rgba(52, 211, 153, 0.13);
+  --rd: #f87171;
+  --rd-bg: rgba(248, 113, 113, 0.14);
+  --bl: #60a5fa;
+  --ab: rgba(16, 185, 129, 0.16);
+  --db: rgba(239, 68, 68, 0.18);
+  --hv: #1d212a;
+  --sh: 0 8px 30px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+html, body {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--tx);
+  font: 13.5px/1.55 "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { background: none; border: 0; cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all .15s ease; }
+button:active { transform: scale(0.97); }
+.mono, pre, code, .dl, .pth, textarea.ed { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.dm { color: var(--dm); }
+.hide { display: none !important; }
+.pad { padding: 14px 16px; }
+svg.ic { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; fill: none; flex: none; }
+svg.ic.sm { width: 14px; height: 14px; }
+svg.ic.lg { width: 19px; height: 19px; }
+
+/* Mascot Animation */
+.mas .bd rect { fill: var(--or); }
+.mas .ey rect { fill: #111317; }
+.mas .ey { transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: no-preference) {
+  .mas .ey { animation: bk 4s infinite; }
+  .mas.work .bd { animation: bob .42s ease-in-out infinite alternate; }
+  .spin { animation: rot 1s linear infinite; }
+}
+@keyframes bk { 94%, 98% { transform: scaleY(.1); } }
+@keyframes bob { to { transform: translateY(-1.5px); } }
+@keyframes rot { to { transform: rotate(360deg); } }
+
+/* Top Header */
+.top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--ln);
+  background: var(--pn);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  flex: none;
+  z-index: 15;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: -0.02em;
+}
+.proj-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 9px;
+  background: var(--card);
+  border: 1px solid var(--ln);
+  font-weight: 600;
+  font-size: 12.5px;
+  max-width: 200px;
+}
+.proj-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj-btn:hover { border-color: var(--or); }
+.top .sp { flex: 1; }
+.icon-btn {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1px solid var(--ln);
+  background: var(--card);
+  color: var(--tx2);
+  font-size: 12px;
+  font-weight: 600;
+}
+.icon-btn:hover { border-color: var(--or); color: var(--or); }
+.icon-btn.sq { width: 34px; padding: 0; }
+.icon-btn.net-on {
+  border-color: rgba(52, 211, 153, 0.45);
+  background: var(--gr-bg);
+  color: var(--gr);
+}
+.dot-live {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gr);
+  box-shadow: 0 0 8px var(--gr);
+}
+
+/* Main 3-Column Desktop Grid */
+main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr) 420px;
+}
+aside, #center {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+#side {
+  background: var(--bg2);
+  border-right: 1px solid var(--ln);
+}
+#det {
+  background: var(--bg2);
+  border-left: 1px solid var(--ln);
+}
+
+/* Sidebar Projects & Files */
+.side-scroll { flex: 1; overflow-y: auto; padding-bottom: 20px; }
+.sec {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 6px;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--dm);
+}
+.sec-acts { display: flex; gap: 4px; }
+.mini-btn {
+  padding: 4px 8px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--or);
+  background: var(--or-bg);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.mini-btn:hover { background: var(--or); color: #fff; }
+.mini-btn.ghost { background: transparent; color: var(--tx2); border: 1px solid var(--ln); }
+.mini-btn.ghost:hover { border-color: var(--or); color: var(--or); }
+
+.pj-list { padding: 4px 8px; display: flex; flex-direction: column; gap: 3px; }
+.pj {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  text-align: left;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  gap: 2px;
+  align-items: stretch;
+}
+.pj:hover { background: var(--hv); }
+.pj.on {
+  background: var(--card);
+  border-color: var(--or);
+  box-shadow: var(--sh);
+}
+.pj-row { display: flex; align-items: center; gap: 7px; width: 100%; }
+.pj-row b { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.pj-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: var(--or-bg);
+  color: var(--or);
+}
+.pj small { color: var(--dm); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.search-box {
+  margin: 4px 10px 8px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: var(--bg);
+  border: 1px solid var(--ln);
+}
+.search-box input {
+  border: 0;
+  background: none;
+  width: 100%;
+  font-size: 12.5px;
+  outline: none;
+}
+
+.tree-wrap { padding: 0 6px; }
+.nd {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  text-align: left;
+  padding: 5px 10px 5px calc(10px + var(--d) * 14px);
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: var(--tx2);
+  justify-content: flex-start;
+}
+.nd.f { color: var(--tx); }
+.nd:hover, .nd.on { background: var(--hv); }
+.nd.on { color: var(--or); font-weight: 600; }
+.nd em {
+  margin-left: auto;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 10.5px;
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+.nd .A { color: var(--gr); background: var(--gr-bg); }
+.nd .M { color: var(--or); background: var(--or-bg); }
+.nd .D { color: var(--rd); background: var(--rd-bg); }
+
+/* Center Workspace: Mode Switcher + Chat IA + Terminal */
+.center-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--ln);
+  background: var(--bg2);
+  flex: none;
+}
+.seg {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--ln);
+}
+.seg button {
+  padding: 5px 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dm);
+}
+.seg button.on {
+  background: var(--card);
+  color: var(--tx);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+.center-tools { display: flex; align-items: center; gap: 5px; }
+
+/* Chat Stream Area */
+#chat-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scroll-behavior: smooth;
+}
+.hero-card {
+  background: var(--card);
+  border: 1px solid var(--ln);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--sh);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.hero-top { display: flex; align-items: center; gap: 14px; }
+.hero-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--or-bg);
+  border: 1px solid rgba(255, 122, 47, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.hero-meta h3 { font-size: 15px; font-weight: 700; }
+.hero-meta p { font-size: 12px; color: var(--dm); margin-top: 2px; word-break: break-all; }
+.chips { display: flex; gap: 7px; flex-wrap: wrap; }
+.chip {
+  padding: 7px 12px;
+  border-radius: 99px;
+  background: var(--bg);
+  border: 1px solid var(--ln);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tx2);
+}
+.chip:hover { border-color: var(--or); color: var(--or); background: var(--or-bg); }
+
+/* Chat Bubbles */
+.msg-u {
+  align-self: flex-end;
+  max-width: 85%;
+  background: linear-gradient(135deg, var(--or), var(--or2));
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 16px 16px 4px 16px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.22);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.msg-a {
+  align-self: stretch;
+  background: var(--card);
+  border: 1px solid var(--ln);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: var(--sh);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.msg-a-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--tx2);
+}
+.msg-a-head .meta { margin-left: auto; font-weight: 500; font-size: 11px; color: var(--dm); }
+
+/* Tool Call Pills inside Assistant Message */
+.tool-list { display: flex; flex-direction: column; gap: 6px; }
+.tool-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ln);
+  background: var(--bg);
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 12px;
+}
+.tool-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+}
+.tool-row b { font-weight: 600; color: var(--tx); }
+.tool-row .t-path {
+  color: var(--or);
+  font-weight: 500;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tool-row .t-path:hover { text-decoration: underline; }
+.tool-row .t-cmd {
+  color: var(--tx2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.tool-out {
+  border-top: 1px solid var(--ln);
+  padding: 8px 11px;
+  font-size: 11.5px;
+  color: var(--dm);
+  max-height: 150px;
+  overflow: auto;
+  white-space: pre-wrap;
+  background: var(--bg2);
+}
+
+/* Rendered Markdown inside Assistant Message */
+.md-body {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--tx);
+  word-break: break-word;
+}
+.md-body p { margin-bottom: 8px; }
+.md-body p:last-child { margin-bottom: 0; }
+.md-body h1, .md-body h2, .md-body h3 { margin: 10px 0 6px; font-weight: 700; line-height: 1.3; }
+.md-body h1 { font-size: 16px; }
+.md-body h2 { font-size: 15px; }
+.md-body h3 { font-size: 14px; }
+.md-body ul, .md-body ol { padding-left: 20px; margin-bottom: 8px; }
+.md-body li { margin-bottom: 3px; }
+.md-body code.inl {
+  background: var(--bg);
+  border: 1px solid var(--ln);
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 12px;
+  color: var(--or);
+}
+.code-blk {
+  margin: 8px 0;
+  border: 1px solid var(--ln);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--ln);
+  font-size: 11px;
+  color: var(--dm);
+}
+.code-blk pre {
+  padding: 10px 12px;
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.thinking-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--or);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 0;
+}
+
+/* Terminal View */
+#term-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.term-subbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--ln);
+  overflow-x: auto;
+}
+#xt { flex: 1; min-height: 0; padding: 6px 0 0 8px; overflow: hidden; }
+
+/* Bottom Composer Dock */
+.comp {
+  flex: none;
+  padding: 8px 12px 10px;
+  background: var(--bg2);
+  border-top: 1px solid var(--ln);
+  position: relative;
+  z-index: 12;
+}
+.keys {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+}
+.keys::-webkit-scrollbar { display: none; }
+.keys button {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px solid var(--ln);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--tx2);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.keys button:hover { border-color: var(--or); color: var(--or); }
+
+.inp-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border: 1.5px solid var(--ln2);
+  border-radius: 14px;
+  padding: 6px 7px 6px 13px;
+  box-shadow: var(--sh);
+  transition: border-color .15s ease;
+}
+.inp-box:focus-within { border-color: var(--or); }
+.inp-box input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  font-size: 14px;
+  color: var(--tx);
+  outline: none;
+}
+.send-btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--or), var(--or2));
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 2px 10px rgba(234, 88, 12, 0.3);
+}
+.send-btn.stop {
+  background: var(--rd);
+  box-shadow: 0 2px 10px rgba(220, 38, 38, 0.3);
+}
+.mic-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  color: var(--dm);
+}
+.mic-btn.on { background: var(--rd-bg); color: var(--rd); }
+
+#pop {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 100%;
+  margin-bottom: 6px;
+  background: var(--card);
+  border: 1px solid var(--ln2);
+  border-radius: 12px;
+  overflow: hidden;
+  z-index: 30;
+  box-shadow: var(--sh);
+  max-height: 230px;
+  overflow-y: auto;
+}
+#pop button {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+  padding: 9px 14px;
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--ln);
+}
+#pop button:last-child { border-bottom: 0; }
+#pop button:hover { background: var(--hv); }
+
+/* Right Panel: File / Editor / Diff / Git */
+.dt {
+  display: flex;
+  border-bottom: 1px solid var(--ln);
+  background: var(--bg2);
+  padding: 0 6px;
+  flex: none;
+}
+.dt button {
+  padding: 10px 12px;
+  color: var(--dm);
+  border-bottom: 2px solid transparent;
+  font-weight: 600;
+  font-size: 12.5px;
+}
+.dt button.on { color: var(--tx); border-color: var(--or); }
+.dt b {
+  background: var(--or);
+  color: #fff;
+  border-radius: 99px;
+  padding: 0 6px;
+  font-size: 10.5px;
+}
+.dh {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--ln);
+  flex-wrap: wrap;
+  background: var(--card);
+  flex: none;
+}
+.dh .pth {
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+#db { flex: 1; overflow: auto; display: flex; flex-direction: column; min-height: 0; }
+textarea.ed {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: var(--bg);
+  color: var(--tx);
+  padding: 12px 14px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  resize: none;
+  outline: none;
+}
+.dl { display: flex; white-space: pre; overflow-x: auto; font-size: 12px; line-height: 1.5; }
+.dl i { flex: none; width: 40px; text-align: right; padding-right: 10px; color: var(--dm); font-style: normal; user-select: none; }
+.dl.add { background: var(--ab); }
+.dl.del { background: var(--db); }
+
+.cr {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--ln);
+}
+.cr .pth { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; text-align: left; justify-content: flex-start; }
+.cr .a { color: var(--gr); font-weight: 600; }
+.cr .d { color: var(--rd); font-weight: 600; }
+
+.git-box { padding: 12px; border-bottom: 1px solid var(--ln); background: var(--card); display: flex; flex-direction: column; gap: 8px; }
+.git-row { display: flex; gap: 6px; align-items: center; }
+.git-row input, .git-row select {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--ln);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+}
+.git-log { padding: 9px 14px; border-bottom: 1px solid var(--ln); font-size: 12.5px; display: flex; flex-direction: column; gap: 2px; }
+.git-log .h { color: var(--or); font-weight: 600; font-size: 11px; }
+
+/* Dialog Modals */
+dialog {
+  background: var(--card);
+  color: var(--tx);
+  border: 1px solid var(--ln2);
+  border-radius: 18px;
+  padding: 20px;
+  width: min(500px, 94vw);
+  max-height: 88dvh;
+  overflow: auto;
+  margin: auto;
+  box-shadow: var(--sh);
+}
+dialog::backdrop { background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px); }
+dialog h2 { font-size: 16px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+dialog label { display: block; margin: 12px 0 5px; color: var(--tx2); font-size: 12px; font-weight: 600; }
+dialog input[type=text], dialog input[type=password], dialog select, dialog textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--ln);
+  border-radius: 10px;
+  padding: 8px 11px;
+  font-size: 13px;
+}
+.mds { border: 1px solid var(--ln); border-radius: 10px; max-height: 140px; overflow: auto; background: var(--bg); }
+.mds button { display: flex; width: 100%; justify-content: space-between; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--ln); }
+.mds button:last-child { border-bottom: 0; }
+.mds button.on { background: var(--or-bg); color: var(--or); font-weight: 600; }
+.row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
+.btn { padding: 8px 14px; border: 1px solid var(--ln); border-radius: 10px; background: var(--bg); font-weight: 600; font-size: 12.5px; }
+.btn:hover { border-color: var(--or); color: var(--or); }
+.btn.p { background: linear-gradient(135deg, var(--or), var(--or2)); border-color: transparent; color: #fff; }
+
+.qr-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--ln);
+  border-radius: 14px;
+  background: var(--bg);
+  margin-top: 12px;
+  text-align: center;
+}
+.qr-box {
+  width: 190px;
+  height: 190px;
+  background: #ffffff;
+  padding: 10px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ln);
+}
+.qr-box svg { width: 100%; height: 100%; }
+.lnk-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.lnk-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--ln);
+  border-radius: 10px;
+  background: var(--bg);
+  cursor: pointer;
+}
+.lnk-item.on { border-color: var(--or); background: var(--or-bg); }
+.lnk-item .meta { flex: 1; min-width: 0; }
+.lnk-item .meta b { display: block; font-size: 12.5px; }
+.lnk-item .meta small { display: block; color: var(--dm); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Mobile Bottom Nav */
+#mn { display: none; }
+@media (max-width: 1020px) {
+  main { display: block; position: relative; }
+  aside, #center { position: absolute; inset: 0; display: none !important; border: 0 !important; }
+  main[data-v=side] #side, main[data-v=det] #det, main[data-v=center] #center { display: flex !important; }
+  #mn {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    background: var(--pn);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--ln);
+    padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px));
+    flex: none;
+    z-index: 20;
+  }
+  #mn button {
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px 4px;
+    border-radius: 10px;
+    color: var(--dm);
+    font-size: 11px;
+    font-weight: 600;
+    position: relative;
+  }
+  #mn button.on { color: var(--or); background: var(--or-bg); }
+  #mn .m-bdg {
+    position: absolute;
+    top: 3px;
+    right: 22%;
+    background: var(--or);
+    color: #fff;
+    font-size: 9.5px;
+    padding: 0 5px;
+    border-radius: 99px;
+  }
+  .hide-mob { display: none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- BARRE SUPÉRIEURE -->
+<header class="top">
+  <div class="brand">
+    <span id="tm"></span>
+    <span class="hide-mob">agy</span>
+  </div>
+
+  <button class="proj-btn" id="btn-top-proj" title="Changer de projet">
+    <svg class="ic sm" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    <span id="tn">mon-projet</span>
+    <svg class="ic sm dm" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+
+  <span class="sp"></span>
+
+  <button class="icon-btn" id="btn-net" title="Accès 4G / QR Code Mobile">
+    <span class="dot-live" id="net-dot"></span>
+    <svg class="ic sm" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    <span id="net-lbl">4G / QR</span>
+  </button>
+
+  <button class="icon-btn sq" id="btn-cfg" title="Modèle IA & Réglages agy">
+    <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+
+  <button class="icon-btn sq" id="th" title="Changer de thème Clair / Sombre">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+</header>
+
+<main id="m" data-v="center">
+  <!-- COLONNE GAUCHE : PROJETS & ARBORESCENCE -->
+  <aside id="side">
+    <div class="side-scroll">
+      <div class="sec">
+        <span>Projets</span>
+        <div class="sec-acts">
+          <button class="mini-btn" id="np">
+            <svg class="ic sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nouveau
+          </button>
+        </div>
+      </div>
+      <div class="pj-list" id="pl"></div>
+
+      <div class="sec">
+        <span>Fichiers du projet</span>
+        <div class="sec-acts">
+          <button class="mini-btn ghost" id="btn-newf" title="Créer un fichier">
+            <svg class="ic sm" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          </button>
+          <button class="mini-btn ghost" id="btn-upf" title="Importer un fichier">
+            <svg class="ic sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </button>
+          <button class="mini-btn ghost" id="btn-reff" title="Rafraîchir">
+            <svg class="ic sm" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+          <input type="file" id="up-inp" class="hide" multiple>
+        </div>
+      </div>
+      <div class="search-box">
+        <svg class="ic sm dm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="flt" placeholder="Rechercher un fichier…">
+      </div>
+      <div class="tree-wrap" id="tr"></div>
+    </div>
+  </aside>
+
+  <!-- COLONNE CENTRALE : CHAT IA & TERMINAL -->
+  <section id="center">
+    <div class="center-bar">
+      <div class="seg">
+        <button id="seg-chat" class="on">
+          <svg class="ic sm" viewBox="0 0 24 24"><path d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z"/></svg>
+          Chat IA
+        </button>
+        <button id="seg-term">
+          <svg class="ic sm" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          Console
+        </button>
+      </div>
+
+      <div class="center-tools">
+        <span class="dm mono hide-mob" id="mdl-badge" style="font-size:11px;margin-right:4px"></span>
+        <button class="mini-btn ghost" id="btn-clear-chat" title="Nouvelle conversation">
+          <svg class="ic sm" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          <span class="hide-mob">Nouveau chat</span>
+        </button>
+        <button class="mini-btn ghost" id="btn-bell" title="Notification sonore/vibration">
+          <svg class="ic sm" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- VUE 1 : CHAT IA MODERNE -->
+    <div id="chat-view" aria-live="polite"></div>
+
+    <!-- VUE 2 : TERMINAL INTERACTIF (POWERSHELL / AGY TUI) -->
+    <div id="term-view" class="hide">
+      <div class="term-subbar">
+        <button class="mini-btn" id="tab-btn-shell">PowerShell</button>
+        <button class="mini-btn ghost" id="tab-btn-agy">agy TUI</button>
+        <span style="flex:1"></span>
+        <button class="mini-btn ghost" id="btn-zm-out">A−</button>
+        <button class="mini-btn ghost" id="btn-zm-in">A+</button>
+        <button class="mini-btn ghost" id="btn-term-restart">Relancer</button>
+      </div>
+      <div id="xt"></div>
+    </div>
+
+    <!-- BARRE D'ENVOI DE MESSAGE -->
+    <div class="comp">
+      <div id="pop" class="hide"></div>
+      <div class="keys hide" id="keys">
+        <button data-k="y">y</button>
+        <button data-k="n">n</button>
+        <button data-k="⏎">Entrée</button>
+        <button data-k="Esc">Esc</button>
+        <button data-k="Tab">Tab</button>
+        <button data-k="↑">↑</button>
+        <button data-k="↓">↓</button>
+        <button data-k="Ctrl+C">Ctrl+C</button>
+      </div>
+      <div class="inp-box">
+        <input id="in" placeholder="Écris ton message à agy… (@fichier, /commande)" autocomplete="off">
+        <button class="mic-btn hide" id="btn-mic" title="Dictée vocale">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
+        <button class="send-btn" id="send">
+          <span id="send-ic" style="display:inline-flex"><svg class="ic sm" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></span>
+          <span id="send-lbl">Envoyer</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- COLONNE DROITE : ÉDITEUR DE CODE, DIFF & GIT -->
+  <aside id="det">
+    <div class="dt" id="dt"></div>
+    <div id="db"></div>
+  </aside>
+</main>
+
+<!-- NAVIGATION MOBILE BAS D'ÉCRAN -->
+<nav id="mn">
+  <button data-nav="chat" class="on">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z"/></svg>
+    <span>Chat IA</span>
+  </button>
+  <button data-nav="term">
+    <svg class="ic" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+    <span>Console</span>
+  </button>
+  <button data-nav="side">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    <span>Projets</span>
+  </button>
+  <button data-nav="det">
+    <svg class="ic" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+    <span>Code & Git</span>
+    <b class="m-bdg hide" id="mob-chg-bdg">0</b>
+  </button>
+</nav>
+
+<!-- DIALOGUE 1 : NOUVEAU PROJET / OUVRIR / CLONER -->
+<dialog id="dlg">
+  <h2>
+    <span>Nouveau projet ou dépôt</span>
+    <button class="icon-btn sq" id="cx"><svg class="ic sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </h2>
+  <div class="seg" style="width:100%;margin:10px 0" id="proj-tabs">
+    <button data-pt="new" class="on" style="flex:1">Nouveau</button>
+    <button data-pt="open" style="flex:1">Dossier PC</button>
+    <button data-pt="clone" style="flex:1">Git Clone</button>
+  </div>
+
+  <div id="pt-new">
+    <label for="pn">Nom du projet</label>
+    <input type="text" id="pn" placeholder="mon-super-projet">
+    <label for="pd">Emplacement sur le PC</label>
+    <input type="text" id="pd" class="mono">
+    <label>Modèle de départ (`.md`)</label>
+    <div class="mds" id="mds"></div>
+    <label for="md-ed">Brief initial pour agy</label>
+    <textarea id="md-ed" rows="4" class="mono"></textarea>
+  </div>
+
+  <div id="pt-open" class="hide">
+    <label for="open-path">Chemin du dossier existant sur le PC</label>
+    <input type="text" id="open-path" class="mono" placeholder="C:\Users\brosi\Downloads\mon-dossier">
+  </div>
+
+  <div id="pt-clone" class="hide">
+    <label for="clone-url">URL du dépôt Git</label>
+    <input type="text" id="clone-url" class="mono" placeholder="https://github.com/user/repo.git">
+    <label for="clone-name">Nom du dossier (optionnel)</label>
+    <input type="text" id="clone-name" placeholder="repo">
+  </div>
+
+  <div class="row">
+    <button class="btn" id="cx2">Annuler</button>
+    <button class="btn p" id="go">Créer & Lancer</button>
+  </div>
+</dialog>
+
+<!-- DIALOGUE 2 : ACCÈS 4G / HORS WI-FI & QR CODE -->
+<dialog id="dlg-net">
+  <h2>
+    <span>Accès Mobile 4G / 5G & QR Code</span>
+    <button class="icon-btn sq" id="net-cx"><svg class="ic sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </h2>
+  <p class="dm" style="font-size:12.5px">
+    Scanne ce QR Code avec ton téléphone pour piloter ton PC depuis n’importe où (même en 4G/5G hors Wi-Fi).
+  </p>
+
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <select id="tun-prov" style="flex:1">
+      <option value="cloudflared">Cloudflare HTTPS (Recommandé)</option>
+      <option value="ssh">SSH localhost.run (Alternatif)</option>
+    </select>
+    <button class="btn p" id="btn-tun-toggle">Activer</button>
+  </div>
+  <div id="tun-status" class="dm mono" style="margin-top:6px;font-size:11.5px"></div>
+
+  <div class="qr-card">
+    <div class="qr-box" id="qr-svg">Chargement…</div>
+    <div class="dm mono" id="qr-url" style="font-size:11px;word-break:break-all"></div>
+    <button class="btn p" id="btn-copy-qr">Copier le lien</button>
+  </div>
+
+  <label>Liens réseau disponibles</label>
+  <div class="lnk-list" id="lnk-list"></div>
+</dialog>
+
+<!-- DIALOGUE 3 : RÉGLAGES AGY -->
+<dialog id="dlg-cfg">
+  <h2>
+    <span>Modèle IA & Configuration</span>
+    <button class="icon-btn sq" id="cfg-cx"><svg class="ic sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </h2>
+  <label for="cfg-model">Modèle d’intelligence artificielle</label>
+  <select id="cfg-model"></select>
+
+  <label for="cfg-mode">Mode d’exécution</label>
+  <select id="cfg-mode">
+    <option value="">Auto / Standard</option>
+    <option value="auto">Autonome complet (auto)</option>
+    <option value="accept-edits">Accepter les éditions (accept-edits)</option>
+    <option value="plan">Planification (plan)</option>
+  </select>
+
+  <label for="cfg-effort">Niveau de réflexion (`--effort`)</label>
+  <select id="cfg-effort">
+    <option value="">Standard</option>
+    <option value="low">Rapide (low)</option>
+    <option value="medium">Équilibré (medium)</option>
+    <option value="high">Approfondi (high)</option>
+    <option value="xhigh">Très approfondi (xhigh)</option>
+    <option value="max">Maximum (max)</option>
+  </select>
+
+  <div class="row">
+    <button class="btn p" id="cfg-save">Enregistrer</button>
+  </div>
+</dialog>
+
+<!-- DIALOGUE 4 : CONNEXION PAR CODE D'ACCÈS -->
+<dialog id="dlg-auth">
+  <h2><span>Connexion au PC</span></h2>
+  <p class="dm" style="font-size:12.5px">Entre le code d’accès affiché dans la console du PC ou ouvre le lien complet avec `?k=...`.</p>
+  <label for="auth-inp">Code d’accès</label>
+  <input type="password" id="auth-inp" class="mono" placeholder="Code secret...">
+  <div id="auth-err" style="color:var(--rd);font-size:12px;margin-top:6px" class="hide"></div>
+  <div class="row">
+    <button class="btn" id="auth-demo">Mode démo</button>
+    <button class="btn p" id="auth-go">Se connecter</button>
+  </div>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const E = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* Icônes SVG Vectorielles */
+const SVG = {
+  file: `<svg class="ic sm" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`,
+  folder: `<svg class="ic sm" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
+  edit: `<svg class="ic sm" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  term: `<svg class="ic sm" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>`,
+  check: `<svg class="ic sm" style="color:var(--gr)" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`,
+  spin: `<svg class="ic sm spin" style="color:var(--or)" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`,
+  err: `<svg class="ic sm" style="color:var(--rd)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+  copy: `<svg class="ic sm" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
+  send: `<svg class="ic sm" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`,
+  stop: `<svg class="ic sm" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>`
+};
+
+const MAS = (s, c = '') => `<svg class="mas ${c}" width="${s}" height="${s * .875}" viewBox="0 0 16 14" shape-rendering="crispEdges" aria-hidden="true"><g class="bd"><rect x="3" y="0" width="2" height="2"/><rect x="11" y="0" width="2" height="2"/><rect x="2" y="2" width="12" height="8"/><rect x="0" y="5" width="2" height="3"/><rect x="14" y="5" width="2" height="3"/><rect x="4" y="10" width="2" height="3"/><rect x="10" y="10" width="2" height="3"/><g class="ey"><rect x="5" y="4" width="2" height="3"/><rect x="9" y="4" width="2" height="3"/></g></g></svg>`;
+$('#tm').innerHTML = MAS(22);
+
+/* Convertisseur Markdown léger et propre */
+function renderMarkdown(mdText) {
+  if (!mdText) return '';
+  const blocks = [];
+  let text = String(mdText).replace(/^\[V\]\s*/i, '').replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (_, lang, code) => {
+    const id = blocks.length;
+    blocks.push(`<div class="code-blk"><div class="code-head"><span>${E(lang || 'code')}</span><button class="mini-btn ghost" data-copy-code="${E(code.trim())}">${SVG.copy} Copier</button></div><pre><code>${E(code.replace(/\n$/, ''))}</code></pre></div>`);
+    return `\x00CODE${id}\x00`;
+  });
+
+  const lines = text.split('\n');
+  let html = '', inList = false;
+  for (let raw of lines) {
+    if (/^\x00CODE\d+\x00$/.test(raw.trim())) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += raw.trim();
+      continue;
+    }
+    let l = E(raw);
+    l = l.replace(/\[([^\]]+)\]\(file:\/\/\/[^)]*\/([^/)]+)\)/g, '<span class="t-path mono" data-f="$2">$1</span>');
+    l = l.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--or)">$1</a>');
+    l = l.replace(/`([^`]+)`/g, '<code class="inl">$1</code>');
+    l = l.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+
+    if (/^###\s+(.+)/.test(l)) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += `<h3>${l.replace(/^###\s+/, '')}</h3>`;
+    } else if (/^##\s+(.+)/.test(l)) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += `<h2>${l.replace(/^##\s+/, '')}</h2>`;
+    } else if (/^#\s+(.+)/.test(l)) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += `<h1>${l.replace(/^#\s+/, '')}</h1>`;
+    } else if (/^\s*(?:[-*]|\d+\.)\s+(.+)/.test(l)) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += `<li>${l.replace(/^\s*(?:[-*]|\d+\.)\s+/, '')}</li>`;
+    } else if (!l.trim()) {
+      if (inList) { html += '</ul>'; inList = false; }
+    } else {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += `<p>${l}</p>`;
+    }
+  }
+  if (inList) html += '</ul>';
+  return html.replace(/\x00CODE(\d+)\x00/g, (_, id) => blocks[+id]);
+}
+
+/* État global */
+let REAL = false, info = null;
+let MDS = [
+  { n: 'plan.md', s: 'Plan de projet', c: '# Plan\n- architecture\n- design moderne\n- fonctionnalités clés' },
+  { n: 'app-mobile-pwa.md', s: 'Application Mobile', c: '# Application Web Mobile\n- interface fluide\n- mode sombre' }
+];
+let P = [
+  { n: 'mon-projet', d: 'C:\\Users\\brosi\\agy-projects\\mon-projet', branch: 'main', f: { 'README.md': { c: '# Mon Projet\n', s: '', o: null } }, closed: new Set() }
+];
+let cur = P[0], F = cur.f, sel = null, dt = 'file', mode = 'file', md = MDS[0];
+let centerMode = 'chat'; // 'chat' | 'term'
+let chatMessages = [], chatBusy = false, chatES = null, timerInt = null;
+let T = null, FIT = null, termES = null, activeTermTab = 'shell';
+let soundEnabled = localStorage.getItem('agy_bell') === '1';
+let termFontSize = +(localStorage.getItem('agy_fs') || 13);
+
+let K = new URLSearchParams(location.search).get('k') || localStorage.getItem('agyk') || sessionStorage.getItem('agyk') || '';
+if (K) {
+  localStorage.setItem('agyk', K);
+  sessionStorage.setItem('agyk', K);
+  if (location.search.includes('k=')) history.replaceState(null, '', location.pathname);
+}
+
+const api = (u, b) => fetch('/api/' + u + (u.includes('?') ? '&' : '?') + 'k=' + encodeURIComponent(K), {
+  method: b ? 'POST' : 'GET',
+  headers: { 'x-agy-token': K, ...(b ? { 'content-type': 'application/json' } : {}) },
+  body: b ? JSON.stringify(b) : undefined
+}).then(async r => {
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw Error(j.error || 'Erreur HTTP ' + r.status);
+  return j;
+});
+
+function setBusyUi(on) {
+  chatBusy = !!on;
+  const tmEl = $('#tm');
+  if (tmEl) tmEl.innerHTML = MAS(22, chatBusy ? 'work' : '');
+  const sendBtn = $('#send');
+  if (sendBtn) sendBtn.classList.toggle('stop', chatBusy && centerMode === 'chat');
+  const sendIc = $('#send-ic');
+  if (sendIc) sendIc.innerHTML = (chatBusy && centerMode === 'chat') ? SVG.stop : SVG.send;
+  const sendLbl = $('#send-lbl');
+  if (sendLbl) sendLbl.textContent = (chatBusy && centerMode === 'chat') ? 'Stop' : 'Envoyer';
+}
+
+function notifyDone() {
+  if (!soundEnabled) return;
+  try {
+    if (navigator.vibrate) navigator.vibrate([70, 40, 70]);
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.frequency.setValueAtTime(660, ctx.currentTime);
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08);
+    g.gain.setValueAtTime(0.08, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.24);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.24);
+  } catch {}
+}
+
+/* Navigation Mobile & Switch Chat / Console */
+function switchCenterMode(m) {
+  centerMode = m;
+  $('#seg-chat').classList.toggle('on', m === 'chat');
+  $('#seg-term').classList.toggle('on', m === 'term');
+  $('#chat-view').classList.toggle('hide', m !== 'chat');
+  $('#term-view').classList.toggle('hide', m !== 'term');
+  $('#keys').classList.toggle('hide', m !== 'term');
+  $('#in').placeholder = m === 'chat'
+    ? 'Écris ton message à agy… (@fichier, /commande)'
+    : 'Commande à envoyer au terminal…';
+  setBusyUi(chatBusy);
+  if (m === 'term') {
+    initTerm();
+    if (REAL && cur.n && !termES) attachTerm(cur, activeTermTab);
+    setTimeout(fitTerm, 60);
+  }
+}
+
+function mobileNav(target) {
+  $$('#mn button').forEach(b => b.classList.toggle('on', b.dataset.nav === target));
+  if (target === 'chat') {
+    $('#m').dataset.v = 'center';
+    switchCenterMode('chat');
+  } else if (target === 'term') {
+    $('#m').dataset.v = 'center';
+    switchCenterMode('term');
+  } else if (target === 'side') {
+    $('#m').dataset.v = 'side';
+  } else if (target === 'det') {
+    $('#m').dataset.v = 'det';
+  }
+}
+
+$('#seg-chat').onclick = () => switchCenterMode('chat');
+$('#seg-term').onclick = () => switchCenterMode('term');
+$$('#mn button').forEach(b => b.onclick = () => mobileNav(b.dataset.nav));
+$('#btn-top-proj').onclick = () => {
+  if (window.matchMedia('(max-width:1020px)').matches) mobileNav('side');
+  else $('#np').click();
+};
+
+/* Rendu du Chat IA */
+function toolLabel(name) {
+  const map = {
+    read_file: 'Lecture fichier',
+    view_file: 'Lecture fichier',
+    write_to_file: 'Création fichier',
+    replace_file_content: 'Modification code',
+    multi_replace_file_content: 'Modification multiple',
+    run_command: 'Commande système',
+    grep_search: 'Recherche texte',
+    find_by_name: 'Recherche fichiers',
+    list_dir: 'Exploration dossier'
+  };
+  return map[name] || name;
+}
+
+function renderChat() {
+  const box = $('#chat-view');
+  const hero = `
+    <div class="hero-card">
+      <div class="hero-top">
+        <div class="hero-icon">${MAS(32)}</div>
+        <div class="hero-meta">
+          <h3>Projet actif : ${E(cur.n)}</h3>
+          <p class="mono">${E(cur.d)}</p>
+        </div>
+      </div>
+      <div class="chips">
+        <button class="chip" data-prompt="Analyse les fichiers de ce projet et résume son architecture.">Analyser le projet</button>
+        <button class="chip" data-prompt="Crée une page web moderne et responsive dans ce projet.">Créer une interface moderne</button>
+        <button class="chip" data-prompt="Vérifie le code, corrige les bugs éventuels et améliore le design.">Améliorer & corriger</button>
+      </div>
+    </div>
+  `;
+
+  const msgsHtml = chatMessages.map(m => {
+    if (m.role === 'user') {
+      return `<div class="msg-u">${E(m.text)}</div>`;
+    }
+    const toolsHtml = (m.tools || []).map(t => {
+      const stIcon = t.state === 'ACTIVE' ? SVG.spin : (t.state === 'ERROR' ? SVG.err : SVG.check);
+      return `<div class="tool-card">
+        <div class="tool-row">
+          ${stIcon}
+          <b>${E(toolLabel(t.name))}</b>
+          ${t.path ? `<span class="t-path mono" data-f="${E(t.path)}" data-m="diff">${E(t.path)}</span>` : ''}
+          ${t.cmd ? `<span class="t-cmd mono">${E(t.cmd)}</span>` : ''}
+        </div>
+        ${t.error ? `<div class="tool-out mono" style="color:var(--rd)">${E(t.error)}</div>` : ''}
+      </div>`;
+    }).join('');
+
+    const isStreaming = m.status === 'streaming';
+    const metaInfo = m.duration ? `${m.duration.toFixed(1)}s` : (isStreaming ? 'En cours…' : '');
+
+    return `<div class="msg-a" id="msg-${E(m.id)}">
+      <div class="msg-a-head">
+        ${MAS(18, isStreaming ? 'work' : '')}
+        <span>agy</span>
+        <span class="meta mono">${E(metaInfo)}</span>
+      </div>
+      ${toolsHtml ? `<div class="tool-list">${toolsHtml}</div>` : ''}
+      ${m.text ? `<div class="md-body">${renderMarkdown(m.text)}</div>` : ''}
+      ${m.error ? `<div style="color:var(--rd);font-size:12.5px;margin-top:4px">${E(m.error)}</div>` : ''}
+      ${isStreaming && !m.text ? `<div class="thinking-bar">${SVG.spin} <span>agy réfléchit et agit sur le projet…</span></div>` : ''}
+    </div>`;
+  }).join('');
+
+  box.innerHTML = hero + msgsHtml;
+  box.scrollTop = box.scrollHeight;
+}
+
+let chatPollTimer = null;
+async function syncChatHistory(pName) {
+  if (!REAL || !pName || cur.n !== pName) return;
+  try {
+    const h = await api('chat/history?p=' + encodeURIComponent(pName));
+    if (cur.n !== pName) return;
+    chatMessages = h.messages || [];
+    setBusyUi(!!h.busy);
+    renderChat();
+    if (!h.busy && chatPollTimer) {
+      clearInterval(chatPollTimer);
+      chatPollTimer = null;
+      refreshFiles();
+      loadGitInfo();
+    }
+  } catch {}
+}
+
+function startChatPolling(pName) {
+  clearInterval(chatPollTimer);
+  chatPollTimer = setInterval(() => syncChatHistory(pName), 1200);
+}
+
+function attachChatStream(p) {
+  if (chatES) { chatES.close(); chatES = null; }
+  clearInterval(chatPollTimer);
+  if (!REAL || !p || !p.n) return;
+
+  // Chargement immédiat de l'historique via fetch JSON (sans attendre SSE)
+  syncChatHistory(p.n);
+
+  chatES = new EventSource(`/api/chat/stream?p=${encodeURIComponent(p.n)}&k=${encodeURIComponent(K)}`);
+  chatES.onmessage = e => {
+    const ev = JSON.parse(e.data);
+    if (ev.type === 'init') {
+      chatMessages = ev.messages || [];
+      setBusyUi(!!ev.busy);
+      renderChat();
+      if (ev.busy) startChatPolling(p.n);
+    } else if (ev.type === 'turn_start') {
+      chatMessages = chatMessages.filter(x => !String(x.id).startsWith('temp-'));
+      if (!chatMessages.some(x => x.id === ev.userMsg.id)) chatMessages.push(ev.userMsg);
+      if (!chatMessages.some(x => x.id === ev.assistantMsg.id)) chatMessages.push(ev.assistantMsg);
+      setBusyUi(true);
+      renderChat();
+    } else if (ev.type === 'delta') {
+      const m = chatMessages.find(x => x.id === ev.msgId);
+      if (m) {
+        m.text = ev.fullText;
+        renderChat();
+      }
+    } else if (ev.type === 'tool') {
+      const m = chatMessages.find(x => x.id === ev.msgId);
+      if (m) {
+        m.tools = m.tools || [];
+        const idx = m.tools.findIndex(t => t.stepIndex === ev.tool.stepIndex);
+        if (idx >= 0) m.tools[idx] = ev.tool;
+        else m.tools.push(ev.tool);
+        renderChat();
+        refreshFiles();
+      }
+    } else if (ev.type === 'turn_end') {
+      clearInterval(chatPollTimer);
+      chatPollTimer = null;
+      const idx = chatMessages.findIndex(x => x.id === ev.msgId);
+      if (idx >= 0) chatMessages[idx] = ev.assistantMsg;
+      setBusyUi(false);
+      renderChat();
+      refreshFiles();
+      loadGitInfo();
+      notifyDone();
+    } else if (ev.type === 'cleared') {
+      chatMessages = [];
+      setBusyUi(false);
+      renderChat();
+    }
+  };
+
+  chatES.addEventListener('files', () => {
+    refreshFiles();
+  });
+}
+
+/* Envoi de message (Chat IA ou Terminal) */
+async function handleSend(rawText) {
+  const t = String(rawText || '').trim();
+  if (centerMode === 'chat' && chatBusy) {
+    clearInterval(chatPollTimer);
+    if (REAL) await api('chat/stop', { p: cur.n }).catch(() => {});
+    setBusyUi(false);
+    await syncChatHistory(cur.n);
+    return;
+  }
+  if (!t) return;
+  $('#in').value = '';
+  $('#pop').classList.add('hide');
+
+  if (t === '/clear') {
+    if (REAL) await api('chat/clear', { p: cur.n });
+    else { chatMessages = []; renderChat(); }
+    return;
+  }
+  if (t === '/files') { mobileNav('side'); return; }
+  if (t === '/diff') { dt = 'chg'; drawDet(); mobileNav('det'); return; }
+  if (t === '/git') { dt = 'git'; loadGitInfo(); drawDet(); mobileNav('det'); return; }
+
+  if (centerMode === 'term') {
+    if (REAL && cur.n) {
+      await api('input', { p: cur.n, tab: activeTermTab, d: t + '\r' }).catch(() => {});
+    }
+    return;
+  }
+
+  // Affichage optimiste immédiat du message utilisateur et de la bulle de réflexion
+  const tempU = { id: 'temp-u-' + Date.now(), role: 'user', text: t, ts: Date.now() };
+  const tempA = { id: 'temp-a-' + Date.now(), role: 'assistant', text: '', tools: [], status: 'streaming', ts: Date.now() };
+  chatMessages.push(tempU, tempA);
+  setBusyUi(true);
+  renderChat();
+
+  if (REAL) {
+    try {
+      startChatPolling(cur.n);
+      await api('chat/send', { p: cur.n, text: t });
+      await syncChatHistory(cur.n);
+    } catch (e) {
+      clearInterval(chatPollTimer);
+      setBusyUi(false);
+      alert('Erreur lors de l’envoi : ' + e.message);
+    }
+  } else {
+    setTimeout(() => {
+      tempA.text = `J'ai bien reçu ta demande : **${t}**.\n\nConnecte-toi au serveur PC pour qu'**agy** modifie directement tes vrais fichiers.`;
+      tempA.status = 'done';
+      tempA.duration = 0.8;
+      setBusyUi(false);
+      renderChat();
+    }, 800);
+  }
+}
+
+$('#btn-clear-chat').onclick = async () => {
+  if (REAL && cur.n) await api('chat/clear', { p: cur.n });
+  else { chatMessages = []; renderChat(); }
+};
+
+/* Terminal xterm.js */
+const KEYS = { y: 'y', n: 'n', Esc: '\x1b', Tab: '\t', '↑': '\x1b[A', '↓': '\x1b[B', '⏎': '\r', 'Ctrl+C': '\x03' };
+
+function themeX() {
+  const s = getComputedStyle(document.documentElement), v = n => s.getPropertyValue(n).trim();
+  return { background: v('--bg'), foreground: v('--tx'), cursor: v('--or'), selectionBackground: v('--hv') };
+}
+
+function fitTerm() {
+  if (!T || !$('#xt').offsetWidth) return;
+  try {
+    FIT.fit();
+    if (REAL && cur.n) api('resize', { p: cur.n, tab: activeTermTab, cols: T.cols, rows: T.rows }).catch(() => {});
+  } catch {}
+}
+
+function initTerm() {
+  if (T) return;
+  T = new Terminal({
+    fontFamily: '"JetBrains Mono",ui-monospace,Consolas,monospace',
+    fontSize: termFontSize,
+    cursorBlink: true,
+    scrollback: 5000,
+    theme: themeX()
+  });
+  FIT = new FitAddon.FitAddon();
+  T.loadAddon(FIT);
+  T.open($('#xt'));
+  T.onData(d => {
+    if (REAL && cur.n) api('input', { p: cur.n, tab: activeTermTab, d }).catch(() => {});
+  });
+  new ResizeObserver(fitTerm).observe($('#xt'));
+}
+
+async function attachTerm(p, tabId = 'shell', opts = {}) {
+  if (!REAL || !p || !p.n) return;
+  initTerm();
+  activeTermTab = tabId;
+  $('#tab-btn-shell').classList.toggle('ghost', tabId !== 'shell');
+  $('#tab-btn-agy').classList.toggle('ghost', tabId !== 'agy');
+  if (termES) { termES.close(); termES = null; }
+  T.reset();
+
+  try {
+    await api('open', { p: p.n, tab: tabId, kind: tabId === 'agy' ? 'agy' : 'shell', restart: !!opts.restart });
+  } catch (e) {
+    T.write('\x1b[31m' + e.message + '\x1b[0m\r\n');
+    return;
+  }
+
+  termES = new EventSource(`/api/stream?p=${encodeURIComponent(p.n)}&tab=${encodeURIComponent(tabId)}&k=${encodeURIComponent(K)}`);
+  termES.onmessage = e => T.write(JSON.parse(e.data));
+  setTimeout(fitTerm, 60);
+}
+
+$('#tab-btn-shell').onclick = () => attachTerm(cur, 'shell');
+$('#tab-btn-agy').onclick = () => attachTerm(cur, 'agy');
+$('#btn-term-restart').onclick = () => attachTerm(cur, activeTermTab, { restart: true });
+$('#btn-zm-in').onclick = () => { termFontSize = Math.min(22, termFontSize + 1); if (T) { T.options.fontSize = termFontSize; fitTerm(); } };
+$('#btn-zm-out').onclick = () => { termFontSize = Math.max(10, termFontSize - 1); if (T) { T.options.fontSize = termFontSize; fitTerm(); } };
+$('#keys').onclick = e => {
+  const b = e.target.closest('[data-k]');
+  if (b && REAL && cur.n) api('input', { p: cur.n, tab: activeTermTab, d: KEYS[b.dataset.k] }).catch(() => {});
+};
+
+/* Arborescence Fichiers, Diff & Git */
+const cnt = f => {
+  const L = (f.c || '').split('\n'), O = f.o == null ? [] : f.o.split('\n');
+  return { a: L.filter(l => !O.includes(l)).length, d: O.filter(l => !L.includes(l)).length };
+};
+
+function rows(f) {
+  const L = (f.c || '').split('\n'), R = (c, n, t) => `<span class="dl ${c}"><i>${n}</i>${E(t)}</span>`;
+  if (f.s === 'A') return L.map((l, i) => R('add', i + 1, '+ ' + l));
+  if (f.s === 'D') return (f.o || '').split('\n').map((l, i) => R('del', i + 1, '- ' + l));
+  if (f.s === 'M') {
+    const O = (f.o || '').split('\n');
+    return O.filter(l => !L.includes(l)).map(l => R('del', '', '- ' + l))
+      .concat(L.map((l, i) => O.includes(l) ? R('', i + 1, '  ' + l) : R('add', i + 1, '+ ' + l)));
+  }
+  return L.map((l, i) => R('', i + 1, '  ' + l));
+}
+
+function drawTop() {
+  $('#tn').textContent = cur.n || 'mon-projet';
+}
+
+function drawProjs() {
+  $('#pl').innerHTML = P.map((p, idx) => {
+    const n = Object.values(p.f || {}).filter(f => f.s).length;
+    return `<button class="pj${p === cur ? ' on' : ''}" data-p="${idx}">
+      <div class="pj-row">
+        ${SVG.folder}
+        <b>${E(p.n)}</b>
+        ${n ? `<span class="pj-badge">${n} modif.</span>` : ''}
+      </div>
+      <small class="mono">${E(p.d)}</small>
+    </button>`;
+  }).join('');
+}
+
+function drawTree() {
+  const q = $('#flt').value.toLowerCase();
+  const ks = Object.keys(F).filter(k => k.toLowerCase().includes(q)).sort();
+  const seen = new Set();
+  let h = '';
+  for (const k of ks) {
+    const pr = k.split('/');
+    let hid = false;
+    for (let i = 0; i < pr.length - 1; i++) {
+      const dp = pr.slice(0, i + 1).join('/');
+      if (!seen.has(dp) && !hid) {
+        seen.add(dp);
+        h += `<button class="nd mono" style="--d:${i}" data-d="${E(dp)}">${SVG.folder} <span>${E(pr[i])}/</span></button>`;
+      }
+      if (cur.closed.has(dp)) hid = true;
+    }
+    if (!hid) {
+      h += `<button class="nd f mono${k === sel ? ' on' : ''}" style="--d:${pr.length - 1}" data-f="${E(k)}">${SVG.file} <span>${E(pr.at(-1))}</span>${F[k].s ? `<em class="${F[k].s}">${F[k].s}</em>` : ''}</button>`;
+    }
+  }
+  $('#tr').innerHTML = h || '<div class="dm pad">Aucun fichier dans ce projet</div>';
+  drawProjs();
+  const chCount = Object.keys(F).filter(k => F[k].s).length;
+  $('#mob-chg-bdg').textContent = chCount;
+  $('#mob-chg-bdg').classList.toggle('hide', !chCount);
+}
+
+let gitState = { branch: 'main', branches: ['main'], commits: [] };
+async function loadGitInfo() {
+  if (!REAL || !cur.n) return;
+  try {
+    gitState = await api('git?p=' + encodeURIComponent(cur.n));
+    cur.branch = gitState.branch;
+    if (dt === 'git') drawDet();
+  } catch {}
+}
+
+function drawDet() {
+  const ch = Object.keys(F).filter(k => F[k].s);
+  $('#dt').innerHTML = `
+    <button data-dt="file" class="${dt === 'file' ? 'on' : ''}">Fichier</button>
+    <button data-dt="chg" class="${dt === 'chg' ? 'on' : ''}">Modifs ${ch.length ? `<b>${ch.length}</b>` : ''}</button>
+    <button data-dt="git" class="${dt === 'git' ? 'on' : ''}">Git (${E(cur.branch || 'main')})</button>
+  `;
+
+  if (dt === 'chg') {
+    const commitBar = ch.length ? `
+      <div class="git-box">
+        <div class="git-row">
+          <input type="text" id="quick-commit-msg" placeholder="Message du commit…">
+          <button class="btn p" id="btn-quick-commit">Commit (${ch.length})</button>
+        </div>
+      </div>` : '';
+    $('#db').innerHTML = commitBar + (ch.length ? ch.map(k => {
+      const c = cnt(F[k]);
+      return `<div class="cr">
+        <button class="pth mono" data-f="${E(k)}" data-m="diff">${SVG.file} ${E(k)}</button>
+        <span class="a mono">+${c.a}</span>
+        <span class="d mono">−${c.d}</span>
+        <button class="mini-btn ghost" data-rv="${E(k)}">Annuler</button>
+      </div>`;
+    }).join('') : '<div class="dm pad">Aucune modification en attente.</div>');
+    return;
+  }
+
+  if (dt === 'git') {
+    $('#db').innerHTML = `
+      <div class="git-box">
+        <div class="git-row">
+          <select id="git-br-sel">
+            ${(gitState.branches.length ? gitState.branches : ['main']).map(b => `<option value="${E(b)}" ${b === gitState.branch ? 'selected' : ''}>Branche : ${E(b)}</option>`).join('')}
+          </select>
+          <button class="btn" id="btn-new-br">+ Branche</button>
+        </div>
+        <div class="git-row">
+          <input type="text" id="git-commit-msg" placeholder="Message de commit…">
+          <button class="btn p" id="btn-git-commit">Commit</button>
+        </div>
+        <div class="git-row">
+          <button class="btn" id="btn-git-pull" style="flex:1">↓ Pull</button>
+          <button class="btn" id="btn-git-push" style="flex:1">↑ Push</button>
+        </div>
+      </div>
+      <div class="sec"><span>Historique Git (${gitState.commits.length})</span></div>
+      <div>
+        ${gitState.commits.map(c => `
+          <div class="git-log">
+            <div><span class="h mono">${E(c.hash)}</span> <b>${E(c.subject)}</b></div>
+            <div class="dm" style="font-size:11px">${E(c.author)} · ${E(c.date)}</div>
+          </div>
+        `).join('') || '<div class="dm pad">Aucun commit.</div>'}
+      </div>
+    `;
+    return;
+  }
+
+  const f = F[sel];
+  if (!f) {
+    $('#db').innerHTML = '<div class="dm pad">Sélectionne un fichier dans l’onglet Projets/Fichiers pour voir ou modifier son code.</div>';
+    return;
+  }
+
+  const header = `
+    <div class="dh">
+      <span class="pth mono">${E(sel)}</span>
+      <button class="mini-btn ${mode === 'file' ? '' : 'ghost'}" data-m="file">Code</button>
+      ${!f.image && !f.binary ? `<button class="mini-btn ${mode === 'edit' ? '' : 'ghost'}" data-m="edit">Éditer</button>` : ''}
+      <button class="mini-btn ${mode === 'diff' ? '' : 'ghost'}" data-m="diff">Diff</button>
+      ${mode === 'edit' ? `<button class="mini-btn" id="btn-save-file">Sauver</button>` : ''}
+    </div>
+  `;
+
+  if (f.image) {
+    $('#db').innerHTML = header + `<div style="padding:16px;text-align:center"><img src="${f.image}" style="max-width:100%;border-radius:10px"></div>`;
+    return;
+  }
+
+  if (mode === 'edit') {
+    $('#db').innerHTML = header + `<textarea class="ed" id="file-ed" spellcheck="false">${E(f.c)}</textarea>`;
+    return;
+  }
+
+  const bodyHtml = mode === 'diff'
+    ? (f.s ? rows(f).join('') : '<div class="dm pad">Aucune modification sur ce fichier.</div>')
+    : (f.c || '').split('\n').map((l, i) => `<span class="dl"><i>${i + 1}</i>  ${E(l)}</span>`).join('');
+
+  $('#db').innerHTML = header + `<div>${bodyHtml}</div>`;
+}
+
+async function loadFile(f) {
+  if (!REAL || !cur.n) return;
+  const p = cur.n;
+  const r = await api('file?p=' + encodeURIComponent(p) + '&f=' + encodeURIComponent(f));
+  if (cur.n !== p || !F[f]) return;
+  const s = F[f].s;
+  F[f].c = r.c;
+  F[f].image = r.image || null;
+  F[f].binary = !!r.binary;
+  F[f].o = (s === 'M' || s === 'D') ? r.o : null;
+  if (s === 'M' && r.o == null) F[f].s = 'A';
+}
+
+async function refreshFiles() {
+  if (!REAL || !cur.n) return;
+  const p = cur.n;
+  let L;
+  try { L = await api('files?p=' + encodeURIComponent(p)); } catch { return; }
+  if (cur.n !== p) return;
+  const nf = {};
+  L.forEach(x => nf[x.f] = { c: F[x.f] ? F[x.f].c : '', s: x.s, o: F[x.f] ? F[x.f].o : null, image: F[x.f] ? F[x.f].image : null, binary: F[x.f] ? F[x.f].binary : false });
+  cur.f = F = nf;
+  if (!sel && L.length) sel = L[0].f;
+  await Promise.all(L.filter(x => x.s || x.f === sel).slice(0, 30).map(x => loadFile(x.f).catch(() => {})));
+  drawTree();
+  if (mode !== 'edit') drawDet();
+}
+
+function selectProject(p) {
+  cur = p;
+  F = p.f || {};
+  sel = null;
+  chatMessages = [];
+  drawTop();
+  drawTree();
+  drawDet();
+  renderChat();
+  if (REAL) {
+    attachChatStream(p);
+    refreshFiles();
+    loadGitInfo();
+    if (centerMode === 'term') attachTerm(p, activeTermTab);
+  }
+}
+
+async function openFile(fPath, m = 'file') {
+  sel = fPath;
+  mode = m;
+  dt = 'file';
+  if (REAL && F[fPath]) await loadFile(fPath).catch(() => {});
+  drawTree();
+  drawDet();
+  if (window.matchMedia('(max-width:1020px)').matches) mobileNav('det');
+}
+
+/* Autocomplétion /commandes et @fichiers */
+const SLASH_CMDS = [
+  ['/plan', 'Planifier étape par étape avant de coder'],
+  ['/goal', 'Exécution autonome approfondie'],
+  ['/compact', 'Résumer le contexte'],
+  ['/clear', 'Nouvelle conversation'],
+  ['/files', 'Voir les fichiers'],
+  ['/diff', 'Voir les modifications'],
+  ['/git', 'Ouvrir Git']
+];
+
+function updatePopup() {
+  const v = $('#in').value;
+  let it = [];
+  if (v.startsWith('/') && !v.includes(' ')) {
+    it = SLASH_CMDS.filter(c => c[0].startsWith(v)).map(c => [c[0], c[1], c[0]]);
+  } else {
+    const m = v.match(/@(\S*)$/);
+    if (m) {
+      it = Object.keys(F).filter(f => f.toLowerCase().includes(m[1].toLowerCase())).slice(0, 7).map(f => ['@' + f, F[f].s || '', v.slice(0, m.index) + '@' + f + ' ']);
+    }
+  }
+  $('#pop').classList.toggle('hide', !it.length);
+  $('#pop').innerHTML = it.map(i => `<button data-i="${E(i[2])}"><b class="mono">${E(i[0])}</b> <span class="dm">${E(i[1])}</span></button>`).join('');
+}
+
+$('#in').addEventListener('input', updatePopup);
+$('#in').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    handleSend($('#in').value);
+  }
+});
+$('#send').onclick = () => handleSend($('#in').value);
+$('#flt').oninput = drawTree;
+$('#th').onclick = () => {
+  const r = document.documentElement;
+  r.dataset.theme = getComputedStyle(r).colorScheme === 'dark' ? 'light' : 'dark';
+  if (T) setTimeout(() => T.options.theme = themeX(), 10);
+};
+
+/* Événements globaux (Délégation) */
+document.addEventListener('click', async e => {
+  const t = e.target, q = s => t.closest(s);
+  let b;
+  if (b = q('[data-prompt]')) handleSend(b.dataset.prompt);
+  else if (b = q('[data-copy-code]')) {
+    navigator.clipboard.writeText(b.dataset.copyCode);
+    const old = b.innerHTML;
+    b.innerHTML = `${SVG.check} Copié`;
+    setTimeout(() => b.innerHTML = old, 1200);
+  }
+  else if (b = q('[data-f]')) openFile(b.dataset.f, b.dataset.m || 'file');
+  else if (b = q('[data-d]')) { const d = b.dataset.d; cur.closed.has(d) ? cur.closed.delete(d) : cur.closed.add(d); drawTree(); }
+  else if (b = q('[data-p]')) {
+    selectProject(P[+b.dataset.p]);
+    if (window.matchMedia('(max-width:1020px)').matches) mobileNav('chat');
+  }
+  else if (b = q('[data-dt]')) { dt = b.dataset.dt; if (dt === 'git') loadGitInfo(); drawDet(); }
+  else if (b = q('[data-m]')) { mode = b.dataset.m; drawDet(); }
+  else if (b = q('[data-i]')) { $('#in').value = b.dataset.i; $('#in').focus(); updatePopup(); }
+  else if (b = q('#btn-save-file')) {
+    const ed = $('#file-ed');
+    if (ed && sel && REAL) {
+      await api('file/save', { p: cur.n, f: sel, c: ed.value });
+      mode = 'file';
+      await refreshFiles();
+    }
+  }
+  else if (b = q('[data-rv]')) {
+    const k = b.dataset.rv;
+    if (confirm(`Annuler les modifications sur ${k} ?`) && REAL) {
+      await api('file/revert', { p: cur.n, f: k });
+      await refreshFiles();
+    }
+  }
+  else if (b = q('#btn-quick-commit')) {
+    const msg = ($('#quick-commit-msg').value || '').trim() || 'Mise à jour via agy';
+    if (REAL) { await api('git', { p: cur.n, action: 'commit', message: msg }); await refreshFiles(); await loadGitInfo(); }
+  }
+  else if (b = q('#btn-git-commit')) {
+    const msg = ($('#git-commit-msg').value || '').trim() || 'Mise à jour via agy';
+    if (REAL) { await api('git', { p: cur.n, action: 'commit', message: msg }); $('#git-commit-msg').value = ''; await refreshFiles(); await loadGitInfo(); }
+  }
+  else if (b = q('#btn-git-push')) {
+    if (REAL) { b.textContent = 'Push…'; try { await api('git', { p: cur.n, action: 'push' }); b.textContent = '✓ Push OK'; } catch (err) { alert(err.message); b.textContent = '↑ Push'; } }
+  }
+  else if (b = q('#btn-git-pull')) {
+    if (REAL) { b.textContent = 'Pull…'; try { await api('git', { p: cur.n, action: 'pull' }); await refreshFiles(); b.textContent = '✓ Pull OK'; } catch (err) { alert(err.message); b.textContent = '↓ Pull'; } }
+  }
+  else if (b = q('#btn-new-br')) {
+    const name = prompt('Nom de la nouvelle branche :');
+    if (name && REAL) { await api('git', { p: cur.n, action: 'branch', branch: name, create: true }); await loadGitInfo(); }
+  }
+});
+
+/* Création / Upload de fichiers */
+$('#btn-newf').onclick = async () => {
+  const name = prompt('Nom du fichier (ex: src/app.js) :');
+  if (!name || !REAL) return;
+  await api('file/save', { p: cur.n, f: name, c: '' });
+  await refreshFiles();
+  openFile(name.replace(/\\/g, '/'), 'edit');
+};
+$('#btn-upf').onclick = () => $('#up-inp').click();
+$('#up-inp').onchange = async e => {
+  for (const file of Array.from(e.target.files || [])) {
+    const reader = new FileReader();
+    await new Promise(res => {
+      reader.onload = async () => {
+        const b64 = String(reader.result).split(',')[1] || '';
+        if (REAL) await api('file/save', { p: cur.n, f: file.name, base64: b64 });
+        res();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  $('#up-inp').value = '';
+  if (REAL) await refreshFiles();
+};
+$('#btn-reff').onclick = () => refreshFiles();
+
+/* Dialogues Nouveau Projet, 4G/QR & Réglages */
+let projTabMode = 'new';
+$$('#proj-tabs button').forEach(b => b.onclick = () => {
+  projTabMode = b.dataset.pt;
+  $$('#proj-tabs button').forEach(x => x.classList.toggle('on', x === b));
+  $('#pt-new').classList.toggle('hide', projTabMode !== 'new');
+  $('#pt-open').classList.toggle('hide', projTabMode !== 'open');
+  $('#pt-clone').classList.toggle('hide', projTabMode !== 'clone');
+});
+
+function drawMds() {
+  $('#mds').innerHTML = MDS.map(m => `<button data-n="${E(m.n)}" class="${m === md ? 'on' : ''}"><span>${E(m.n)}</span><small class="dm">${E(m.s)}</small></button>`).join('');
+  $('#md-ed').value = md ? md.c : '';
+  $('#mds').querySelectorAll('button').forEach(b => b.onclick = () => {
+    md = MDS.find(m => m.n === b.dataset.n);
+    drawMds();
+  });
+}
+$('#np').onclick = () => { drawMds(); $('#dlg').showModal(); };
+$('#cx').onclick = $('#cx2').onclick = () => $('#dlg').close();
+
+let currentQrUrl = '';
+function updateTunnelUi(tun, links) {
+  if (!tun) return;
+  const isRunning = tun.status === 'running' && tun.url;
+  $('#btn-net').classList.toggle('net-on', !!isRunning);
+  $('#net-lbl').textContent = isRunning ? '4G Actif' : '4G / QR';
+  $('#btn-tun-toggle').textContent = isRunning ? 'Arrêter' : 'Activer';
+  $('#tun-status').textContent = isRunning ? 'Tunnel HTTPS public actif (accessible hors Wi-Fi).' : (tun.error || 'Tunnel arrêté.');
+
+  const allLinks = links || (info && info.links) || [];
+  if (!currentQrUrl && allLinks.length) currentQrUrl = allLinks[0].url;
+  if (isRunning && (!currentQrUrl || currentQrUrl.includes('localhost'))) currentQrUrl = tun.url;
+  if (tun.qrSvg) $('#qr-svg').innerHTML = tun.qrSvg;
+  $('#qr-url').textContent = currentQrUrl || '';
+
+  $('#lnk-list').innerHTML = allLinks.map(l => `
+    <div class="lnk-item${l.url === currentQrUrl ? ' on' : ''}" data-qurl="${E(l.url)}">
+      <div class="meta">
+        <b>${E(l.label)}</b>
+        <small class="mono">${E(l.url)}</small>
+      </div>
+      <button class="mini-btn" data-copy="${E(l.url)}">Copier</button>
+    </div>
+  `).join('');
+
+  $('#lnk-list').querySelectorAll('[data-qurl]').forEach(el => {
+    el.onclick = async e => {
+      const cp = e.target.closest('[data-copy]');
+      if (cp) {
+        e.stopPropagation();
+        navigator.clipboard.writeText(cp.dataset.copy);
+        cp.textContent = '✓ Copié';
+        setTimeout(() => cp.textContent = 'Copier', 1200);
+        return;
+      }
+      currentQrUrl = el.dataset.qurl;
+      const r = await api('tunnel?url=' + encodeURIComponent(currentQrUrl));
+      updateTunnelUi(r, r.links);
+    };
+  });
+}
+
+$('#btn-net').onclick = async () => {
+  $('#dlg-net').showModal();
+  if (!REAL) return;
+  const r = await api('tunnel' + (currentQrUrl ? '?url=' + encodeURIComponent(currentQrUrl) : ''));
+  updateTunnelUi(r, r.links);
+};
+$('#net-cx').onclick = () => $('#dlg-net').close();
+$('#btn-tun-toggle').onclick = async () => {
+  if (!REAL) return;
+  const isRunning = $('#btn-tun-toggle').textContent.includes('Arrêter');
+  $('#btn-tun-toggle').textContent = 'Patiente…';
+  const r = await api('tunnel', { action: isRunning ? 'stop' : 'start', provider: $('#tun-prov').value });
+  currentQrUrl = r.url || '';
+  updateTunnelUi(r, r.links);
+};
+$('#btn-copy-qr').onclick = () => {
+  if (currentQrUrl) {
+    navigator.clipboard.writeText(currentQrUrl);
+    $('#btn-copy-qr').textContent = '✓ Lien copié !';
+    setTimeout(() => $('#btn-copy-qr').textContent = 'Copier le lien', 1400);
+  }
+};
+
+$('#btn-cfg').onclick = () => {
+  if (info && info.models) {
+    $('#cfg-model').innerHTML = info.models.map(m => `<option value="${E(m.id)}">${E(m.label)}</option>`).join('');
+  }
+  if (info && info.settings) {
+    $('#cfg-model').value = info.settings.model || '';
+    $('#cfg-mode').value = info.settings.mode || '';
+    $('#cfg-effort').value = info.settings.effort || '';
+  }
+  $('#dlg-cfg').showModal();
+};
+$('#cfg-cx').onclick = () => $('#dlg-cfg').close();
+$('#cfg-save').onclick = async () => {
+  if (REAL) {
+    const r = await api('settings', {
+      model: $('#cfg-model').value,
+      mode: $('#cfg-mode').value,
+      effort: $('#cfg-effort').value
+    });
+    info.settings = r.settings;
+    $('#mdl-badge').textContent = r.settings.model || 'agy auto';
+  }
+  $('#dlg-cfg').close();
+};
+
+/* Initialisation & Connexion */
+$('#auth-demo').onclick = () => { $('#dlg-auth').close(); selectProject(P[0]); };
+$('#auth-go').onclick = async () => {
+  const val = $('#auth-inp').value.trim();
+  if (!val) return;
+  try {
+    const res = await fetch('/api/auth', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: val }) });
+    const j = await res.json();
+    if (!res.ok) throw Error(j.error || 'Code invalide');
+    K = j.token || val;
+    localStorage.setItem('agyk', K);
+    $('#dlg-auth').close();
+    await realInit();
+  } catch (e) {
+    $('#auth-err').textContent = e.message;
+    $('#auth-err').classList.remove('hide');
+  }
+};
+
+async function realInit() {
+  info = await api('info');
+  REAL = true;
+  if (info.token) { K = info.token; localStorage.setItem('agyk', K); }
+  MDS = info.starters.length ? info.starters : MDS;
+  md = MDS[0];
+  P = info.projects.map(x => ({ n: x.n, d: x.d || info.root, custom: !!x.custom, branch: x.branch || 'main', f: {}, closed: new Set() }));
+  $('#pd').value = info.root;
+  $('#mdl-badge').textContent = (info.settings && info.settings.model) || 'agy auto';
+  updateTunnelUi(info.tunnel, info.links);
+
+  $('#go').onclick = async () => {
+    const btn = $('#go');
+    btn.textContent = 'Création…';
+    try {
+      let r;
+      if (projTabMode === 'open') r = await api('projects', { action: 'openPath', path: $('#open-path').value.trim() });
+      else if (projTabMode === 'clone') r = await api('projects', { action: 'clone', repoUrl: $('#clone-url').value.trim(), name: $('#clone-name').value.trim() });
+      else r = await api('projects', { name: $('#pn').value.trim() || 'nouveau-projet', baseDir: $('#pd').value.trim() || info.root, md: md ? { n: md.n, c: $('#md-ed').value } : null });
+      $('#dlg').close();
+      const np = { n: r.n, d: r.d || info.root, branch: 'main', f: {}, closed: new Set() };
+      P.unshift(np);
+      selectProject(np);
+      if (window.matchMedia('(max-width:1020px)').matches) mobileNav('chat');
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      btn.textContent = 'Créer & Lancer';
+    }
+  };
+
+  selectProject(P[0]);
+}
+
+(async () => {
+  try {
+    const ping = await fetch('/api/ping?k=' + encodeURIComponent(K)).then(r => r.json());
+    if (ping.auth) await realInit();
+    else {
+      selectProject(P[0]);
+      $('#dlg-auth').showModal();
+    }
+  } catch {
+    selectProject(P[0]);
+  }
+})();
+</script>
+</body>
+</html>

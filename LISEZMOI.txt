@@ -1,0 +1,25 @@
+agy console v2.0 — Contrôle local, Wi-Fi, Tailscale & 4G/5G (Hors Wi-Fi)
+========================================================================
+
+LANCEMENT RAPIDE :
+1. Double-clique sur `Lancer-agy-console.bat` (ou lance `npm start` / `node server.js`).
+2. Le serveur démarre automatiquement :
+   - Lien Local (PC)
+   - Lien Wi-Fi / LAN & Tailscale
+   - Tunnel HTTPS public automatique (Cloudflare Quick Tunnel ou SSH localhost.run) pour piloter ton PC depuis ton téléphone en 4G/5G ou depuis n'importe quel autre réseau Wi-Fi !
+3. Un QR Code s'affiche directement dans le terminal ET dans le bouton « 🌐 Accès 4G / QR » de l'interface Web : scanne-le avec ton téléphone pour te connecter instantanément.
+
+NOUVEAUTÉS v2.0 :
+- Accès hors Wi-Fi (4G / 5G / Partout) sans ouvrir de port sur ta box ni configurer de routeur.
+- Jeton d'accès persistant (sauvegardé dans ~/.agy-console/config.json) + authentification par cookie sécurisé et écran de connexion.
+- Multi-terminaux par projet : onglet 🤖 agy + onglets 💻 Terminal PowerShell/Shell.
+- Sélecteur de modèle IA (`agy models`), mode (`auto`, `accept-edits`, `plan`), effort (`low` à `max`) et auto-validation (`--dangerously-skip-permissions`).
+- Explorateur temps réel (`fs.watch`) + Éditeur de code intégré (`Ctrl+S`), upload/téléchargement de fichiers, aperçu d'images.
+- Client Git intégré : Diff ligne par ligne, Commit en 1 clic, Push, Pull, changement/création de branche et historique des commits.
+- Ouverture de n'importe quel dossier existant du PC ou clonage direct d'un dépôt Git (`git clone`).
+- Interface Mobile PWA améliorée : barre de touches rapides, autocomplétion `/commandes` et `@fichiers`, historique des prompts, dictée vocale 🎤 et alerte sonore/vibration 🔔 quand agy a terminé.
+
+OPTIONS (variables d'environnement ou arguments) :
+- `npm run local` (ou `node server.js --no-tunnel`) : démarre uniquement en local/Wi-Fi sans ouvrir le tunnel Internet.
+- `npm run new-token` (ou `node server.js --new-token`) : régénère un nouveau code d'accès secret.
+- `PORT=3000`, `AGY_ROOT=...`, `AGY_TOKEN=...`, `AGY_CMD=agy`, `AGY_TUNNEL=0`.
