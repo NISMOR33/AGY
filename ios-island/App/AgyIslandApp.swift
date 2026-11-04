@@ -136,8 +136,10 @@ struct LoginView: View {
     var body: some View {
         VStack(spacing: 22) {
             Spacer()
-            Image(systemName: "sparkles.rectangle.stack.fill")
-                .font(.system(size: 58)).foregroundStyle(.orange)
+            AgyMascot()
+                .frame(width: 96, height: 84)
+                .padding(18)
+                .background(Color.black, in: RoundedRectangle(cornerRadius: 26))
             VStack(spacing: 6) {
                 Text("AGY").font(.largeTitle.bold())
                 Text("Connecte l’app à ta console AGY").foregroundStyle(.secondary)

@@ -22,9 +22,11 @@ struct AgyIslandLiveActivityWidget: Widget {
                 // Vue Élargie (Appui long sur l'Îlot)
                 DynamicIslandExpandedRegion(.leading) {
                     HStack(spacing: 6) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(context.state.isBusy ? Color.orange : (context.state.isSuccess ? Color.green : Color.gray))
+                        AgyMascot(
+                            color: context.state.isSuccess ? .green : .orange,
+                            working: context.state.isBusy
+                        )
+                            .frame(width: 22, height: 20)
                         Text(context.state.projectName)
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.white)
@@ -82,9 +84,11 @@ struct AgyIslandLiveActivityWidget: Widget {
             } compactLeading: {
                 // Vue Compacte Gauche (Pilule standard)
                 HStack(spacing: 4) {
-                    Image(systemName: context.state.isBusy ? "arrow.triangle.2.circlepath" : (context.state.isSuccess ? "checkmark.circle.fill" : "sparkle"))
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(context.state.isBusy ? Color.orange : (context.state.isSuccess ? Color.green : Color.white))
+                    AgyMascot(
+                        color: context.state.isSuccess ? .green : .orange,
+                        working: context.state.isBusy
+                    )
+                        .frame(width: 18, height: 16)
                 }
                 .padding(.leading, 4)
             } compactTrailing: {
@@ -95,9 +99,11 @@ struct AgyIslandLiveActivityWidget: Widget {
                     .padding(.trailing, 4)
             } minimal: {
                 // Vue Minimale (quand une autre app partage l'îlot)
-                Circle()
-                    .fill(context.state.isBusy ? Color.orange : (context.state.isSuccess ? Color.green : Color.gray))
-                    .frame(width: 10, height: 10)
+                AgyMascot(
+                    color: context.state.isSuccess ? .green : .orange,
+                    working: context.state.isBusy
+                )
+                    .frame(width: 16, height: 14)
             }
         }
     }
@@ -114,9 +120,11 @@ struct LockScreenLiveActivityView: View {
                     .fill(state.isBusy ? Color.orange.opacity(0.2) : (state.isSuccess ? Color.green.opacity(0.2) : Color.white.opacity(0.1)))
                     .frame(width: 44, height: 44)
                 
-                Image(systemName: state.isBusy ? "bolt.fill" : (state.isSuccess ? "checkmark" : "sparkles"))
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(state.isBusy ? .orange : (state.isSuccess ? .green : .white))
+                AgyMascot(
+                    color: state.isSuccess ? .green : .orange,
+                    working: state.isBusy
+                )
+                    .frame(width: 30, height: 27)
             }
             
             VStack(alignment: .leading, spacing: 3) {
