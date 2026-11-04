@@ -27,6 +27,11 @@ jobs:
         run: |
           cd ios-island
           xcodegen generate
+          # XcodeGen 2.46 defaults to PBX project format 77, which Xcode 15.4 cannot open.
+          # Force the generated project metadata to Xcode 15-compatible format.
+          sed -i '' 's/objectVersion = 77;/objectVersion = 60;/' AgyIsland.xcodeproj/project.pbxproj
+          sed -i '' 's/compatibilityVersion = "Xcode 16.0";/compatibilityVersion = "Xcode 15.0";/' AgyIsland.xcodeproj/project.pbxproj
+          grep -E 'objectVersion|compatibilityVersion' AgyIsland.xcodeproj/project.pbxproj
           ls -la AgyIsland.xcodeproj
 
       - name: Compile App & Widget with xcodebuild
