@@ -1,38 +1,28 @@
-# agy Island — Dynamic Island & Live Activities pour iOS
+# AGY pour iPhone
 
-Ce dossier contient les deux solutions complètes pour bénéficier du **Dynamic Island** (comme l'application Codex) sans posséder de Mac et sans payer les 99$/an d'Apple.
+L'application iOS est un conteneur natif de la console AGY existante. Elle ne
+remplace pas le site : le navigateur et l'application peuvent utiliser le même
+serveur Node simultanément, avec les mêmes projets, conversations et fichiers.
 
----
+## Fonctionnement
 
-## 🟢 Solution A : L'Îlot Web Flottant PiP (0€, 0 Installation, Immédiat)
+- écran SwiftUI de connexion à l'URL du serveur AGY ;
+- code d'accès conservé dans le trousseau sécurisé iOS (Keychain) ;
+- console complète chargée dans `WKWebView` : chat en streaming, projets,
+  fichiers, terminal, Git, réglages et aperçus ;
+- pont JavaScript natif qui traduit les événements SSE réels du chat en Live
+  Activity et Dynamic Island ;
+- extension WidgetKit partagée avec l'application ;
+- IPA non signé compilé par GitHub Actions puis resigné par Sideloadly.
 
-Déjà intégré directement dans l'interface web `agy-console` :
-1. Ouvre ta console `agy` sur Safari iOS (`https://...trycloudflare.com`).
-2. Clique sur le nouveau bouton **« Îlot »** dans la barre d'outils du chat.
-3. Safari fait apparaître une **pilule flottante Picture-in-Picture** noire OLED qui reste affichée par-dessus toutes tes autres applications iOS !
-4. L'îlot affiche en direct :
-   - Le statut d'activité d'agy (orange pulsant en réflexion, bleu pendant l'appel d'outils, vert au succès).
-   - Le nom du projet actif.
-   - Le chronomètre d'exécution en direct.
-   - Les actions précises effectuées.
+## Installation
 
----
+1. Lancer le workflow **Build iOS Dynamic Island (.ipa)** ou pousser une
+   modification de `ios-island/` sur `main`.
+2. Télécharger l'artifact `agy-island-ios-ipa`.
+3. Extraire `agy-island.ipa`, puis l'installer avec Sideloadly.
+4. Dans l'app, saisir l'URL HTTPS Cloudflare du serveur et le code d'accès AGY.
 
-## 🍏 Solution B : L'Application Native iOS Swift + ActivityKit (Vrai Dynamic Island Matériel)
-
-Cette solution utilise le matériel physique de l'iPhone (l'encoche Dynamic Island des iPhone 14 Pro, 15, 15 Pro, 16, 16 Pro ainsi que la bannière d'écran verrouillé sur tous les iPhone iOS 16.1+).
-
-### Comment compiler SANS Mac ?
-Le workflow GitHub Actions `.github/workflows/build-ios.yml` utilise un serveur Mac virtuel dans le cloud GitHub (gratuit) :
-1. Pousse ce code sur ton dépôt GitHub (`git push`).
-2. Va dans l'onglet **Actions** sur GitHub : le workflow `Build iOS Dynamic Island (.ipa)` compile automatiquement l'application Swift et génère le fichier `agy-island.ipa`.
-3. Télécharge le fichier `agy-island.ipa` sur ton PC Windows.
-
-### Comment installer sur ton iPhone depuis Windows (0€) ?
-1. Télécharge **Sideloadly** (gratuit pour Windows) sur [sideloadly.io](https://sideloadly.io).
-2. Branche ton iPhone en USB à ton PC Windows (ou connecte-le au même réseau Wi-Fi).
-3. Ouvre Sideloadly, glisse le fichier `agy-island.ipa`.
-4. Renseigne ton identifiant Apple personnel gratuit (pas besoin de compte développeur payant).
-5. Clique sur **Start** : Sideloadly signe l'application et l'installe directement sur l'écran d'accueil de ton iPhone.
-6. Sur ton iPhone : va dans *Réglages > Général > Gestion des appareils* et clique sur "Faire confiance à l'application".
-7. Lance **agy Island**, entre l'URL de ton serveur Cloudflare, et profite de la vraie Dynamic Island matérielle !
+Le serveur doit rester démarré pour utiliser l'application. Les mises à jour du
+Dynamic Island sont locales et fonctionnent pendant que l'application est
+active ; des mises à jour après suspension complète nécessiteraient APNs.

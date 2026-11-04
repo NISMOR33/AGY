@@ -1,229 +1,225 @@
 import SwiftUI
 import ActivityKit
+import Security
 
 @main
 struct AgyIslandApp: App {
-    @StateObject private var liveActivityManager = LiveActivityManager.shared
+    @StateObject private var session = AgySession()
+    @StateObject private var activity = LiveActivityManager()
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(liveActivityManager)
+            RootView()
+                .environmentObject(session)
+                .environmentObject(activity)
         }
     }
 }
 
-// MARK: - Manager pour piloter la Live Activity et le Dynamic Island
 @MainActor
-final class LiveActivityManager: ObservableObject {
-    static let shared = LiveActivityManager()
+final class AgySession: ObservableObject {
+    @Published var serverURL = UserDefaults.standard.string(forKey: "agy_server_url") ?? ""
+    @Published var token = KeychainStore.read("agy_access_token") ?? ""
+    @Published var isConnected = false
+    @Published var isChecking = false
+    @Published var errorMessage: String?
 
-    @Published var currentActivity: Activity<AgyIslandAttributes>?
-    @Published var isConnected: Bool = false
-    @Published var serverUrl: String = UserDefaults.standard.string(forKey: "agy_server_url") ?? ""
-    @Published var authToken: String = UserDefaults.standard.string(forKey: "agy_auth_token") ?? ""
-    @Published var log: [String] = []
-
-    private var eventSourceTask: URLSessionDataTask?
-    private var timer: Timer?
-    private var startTimestamp: Date?
-
-    init() {
-        // Nettoyer les activités orphelines éventuelles
-        for act in Activity<AgyIslandAttributes>.activities {
-            self.currentActivity = act
-            break
-        }
+    var normalizedURL: URL? {
+        var value = serverURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        while value.hasSuffix("/") { value.removeLast() }
+        guard var components = URLComponents(string: value),
+              components.scheme == "https" || components.scheme == "http",
+              components.host != nil else { return nil }
+        components.query = nil
+        components.fragment = nil
+        return components.url
     }
 
-    func saveConfig(url: String, token: String) {
-        self.serverUrl = url.trimmingCharacters(in: .whitespacesAndNewlines)
-        self.authToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
-        UserDefaults.standard.set(self.serverUrl, forKey: "agy_server_url")
-        UserDefaults.standard.set(self.authToken, forKey: "agy_auth_token")
-    }
-
-    // Déclencher manuellement ou via SSE l'îlot
-    func startDynamicIsland(projectName: String = "agy-console") {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            addLog("⚠️ Live Activities désactivées dans les réglages iOS.")
+    func connect() async {
+        guard let baseURL = normalizedURL else {
+            errorMessage = "Adresse invalide. Utilise https://… ou http://…"
             return
         }
-
-        stopDynamicIsland()
-
-        let initialAttributes = AgyIslandAttributes(title: "agy console")
-        let initialState = AgyIslandAttributes.ContentState(
-            isBusy: true,
-            projectName: projectName,
-            statusText: "agy réfléchit…",
-            activeTool: nil,
-            elapsedTime: "00:00",
-            isSuccess: false
-        )
-
+        isChecking = true
+        errorMessage = nil
+        defer { isChecking = false }
         do {
-            let activity = try Activity<AgyIslandAttributes>.request(
-                attributes: initialAttributes,
-                content: .init(state: initialState, staleDate: nil),
-                pushType: nil
-            )
-            self.currentActivity = activity
-            self.startTimestamp = Date()
-            startStopwatch()
-            addLog("✅ Îlot Dynamique activé !")
-        } catch {
-            addLog("❌ Erreur lancement Activity: \(error.localizedDescription)")
-        }
-    }
-
-    func updateDynamicIsland(
-        isBusy: Bool,
-        projectName: String,
-        statusText: String,
-        activeTool: String? = nil,
-        isSuccess: Bool = false
-    ) {
-        guard let activity = currentActivity else { return }
-
-        let elapsed = formatElapsed()
-        let updatedState = AgyIslandAttributes.ContentState(
-            isBusy: isBusy,
-            projectName: projectName,
-            statusText: statusText,
-            activeTool: activeTool,
-            elapsedTime: elapsed,
-            isSuccess: isSuccess
-        )
-
-        Task {
-            await activity.update(.init(state: updatedState, staleDate: nil))
-        }
-    }
-
-    func stopDynamicIsland() {
-        timer?.invalidate()
-        timer = nil
-        guard let activity = currentActivity else { return }
-        Task {
-            let finalState = AgyIslandAttributes.ContentState(
-                isBusy: false,
-                projectName: "agy",
-                statusText: "Terminé",
-                elapsedTime: formatElapsed(),
-                isSuccess: true
-            )
-            await activity.end(.init(state: finalState, staleDate: nil), dismissalPolicy: .after(.now + 4))
-            self.currentActivity = nil
-        }
-    }
-
-    private func startStopwatch() {
-        timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self = self, let act = self.currentActivity else { return }
-            var st = act.content.state
-            st.elapsedTime = self.formatElapsed()
-            Task {
-                await act.update(.init(state: st, staleDate: nil))
+            var request = URLRequest(url: baseURL.appendingPathComponent("api/auth"))
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONEncoder().encode(AuthRequest(token: token))
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw AgyError.invalidResponse }
+            if http.statusCode == 200 {
+                _ = try JSONDecoder().decode(AuthResponse.self, from: data)
+                // Keep the access code entered by the user. The server's `token`
+                // response is an internal console identifier, not necessarily AGY_PIN.
+                UserDefaults.standard.set(baseURL.absoluteString, forKey: "agy_server_url")
+                KeychainStore.save(token, key: "agy_access_token")
+                serverURL = baseURL.absoluteString
+                isConnected = true
+            } else {
+                let result = try? JSONDecoder().decode(AuthResponse.self, from: data)
+                throw AgyError.server(result?.error ?? "Connexion refusée (HTTP \(http.statusCode)).")
             }
+        } catch {
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            isConnected = false
         }
     }
 
-    private func formatElapsed() -> String {
-        guard let start = startTimestamp else { return "00:00" }
-        let total = Int(Date().timeIntervalSince(start))
-        let m = total / 60
-        let s = total % 60
-        return String(format: "%02d:%02d", m, s)
-    }
-
-    func addLog(_ msg: String) {
-        log.append("[\(Date().formatted(date: .omitted, time: .standard))] \(msg)")
+    func disconnect() {
+        isConnected = false
+        token = ""
+        KeychainStore.delete("agy_access_token")
+        HTTPCookieStorage.shared.removeCookies(since: .distantPast)
     }
 }
 
-// MARK: - Interface de configuration principale
-struct ContentView: View {
-    @EnvironmentObject var manager: LiveActivityManager
-    @State private var urlInput: String = ""
-    @State private var tokenInput: String = ""
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section(header: Text("Serveur agy-console")) {
-                    TextField("https://...trycloudflare.com", text: $urlInput)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .keyboardType(.URL)
-                    
-                    SecureField("Token d'accès (optionnel)", text: $tokenInput)
-                    
-                    Button("Sauvegarder l'adresse") {
-                        manager.saveConfig(url: urlInput, token: tokenInput)
-                        manager.addLog("Configuration enregistrée.")
-                    }
-                }
-                
-                Section(header: Text("Contrôle Live Activity & Dynamic Island")) {
-                    Button(action: {
-                        manager.startDynamicIsland(projectName: "Projet Actif")
-                    }) {
-                        HStack {
-                            Image(systemName: "sparkles")
-                                .foregroundColor(.orange)
-                            Text("Démarrer l'Îlot Dynamique (Test)")
-                                .fontWeight(.semibold)
-                        }
-                    }
-
-                    Button(action: {
-                        manager.updateDynamicIsland(
-                            isBusy: true,
-                            projectName: "Mon Projet",
-                            statusText: "Lecture de fichier...",
-                            activeTool: "read_file"
-                        )
-                    }) {
-                        Text("Simuler Action Outil (Tool Call)")
-                    }
-
-                    Button(action: {
-                        manager.updateDynamicIsland(
-                            isBusy: false,
-                            projectName: "Mon Projet",
-                            statusText: "Tâche terminée",
-                            isSuccess: true
-                        )
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                            manager.stopDynamicIsland()
-                        }
-                    }) {
-                        Text("Simuler Fin de Tâche (Succès)")
-                            .foregroundColor(.green)
-                    }
-
-                    Button(role: .destructive, action: {
-                        manager.stopDynamicIsland()
-                    }) {
-                        Text("Arrêter l'Îlot")
-                    }
-                }
-                
-                Section(header: Text("Statut")) {
-                    ForEach(manager.log.suffix(6), id: \.self) { line in
-                        Text(line)
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(.gray)
-                    }
-                }
-            }
-            .navigationTitle("agy Island")
-            .onAppear {
-                urlInput = manager.serverUrl
-                tokenInput = manager.authToken
-            }
+private struct AuthRequest: Encodable { let token: String }
+private struct AuthResponse: Decodable { let ok: Int?; let token: String?; let error: String? }
+private enum AgyError: LocalizedError {
+    case invalidResponse, server(String)
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse: return "Réponse du serveur invalide."
+        case .server(let message): return message
         }
     }
+}
+
+enum KeychainStore {
+    static func save(_ value: String, key: String) {
+        delete(key)
+        let data = Data(value.utf8)
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                    kSecAttrService as String: "com.agy.island",
+                                    kSecAttrAccount as String: key,
+                                    kSecValueData as String: data]
+        SecItemAdd(query as CFDictionary, nil)
+    }
+    static func read(_ key: String) -> String? {
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                    kSecAttrService as String: "com.agy.island",
+                                    kSecAttrAccount as String: key,
+                                    kSecReturnData as String: true,
+                                    kSecMatchLimit as String: kSecMatchLimitOne]
+        var item: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
+              let data = item as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+    static func delete(_ key: String) {
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                    kSecAttrService as String: "com.agy.island",
+                                    kSecAttrAccount as String: key]
+        SecItemDelete(query as CFDictionary)
+    }
+}
+
+struct RootView: View {
+    @EnvironmentObject var session: AgySession
+    var body: some View {
+        Group {
+            if session.isConnected, let url = session.normalizedURL {
+                AgyWebView(baseURL: url, token: session.token)
+            } else {
+                LoginView()
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+struct LoginView: View {
+    @EnvironmentObject var session: AgySession
+    var body: some View {
+        VStack(spacing: 22) {
+            Spacer()
+            Image(systemName: "sparkles.rectangle.stack.fill")
+                .font(.system(size: 58)).foregroundStyle(.orange)
+            VStack(spacing: 6) {
+                Text("AGY").font(.largeTitle.bold())
+                Text("Connecte l’app à ta console AGY").foregroundStyle(.secondary)
+            }
+            VStack(spacing: 14) {
+                TextField("https://…trycloudflare.com", text: $session.serverURL)
+                    .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    .keyboardType(.URL).textContentType(.URL)
+                    .padding().background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                SecureField("Code d’accès AGY", text: $session.token)
+                    .textContentType(.password)
+                    .padding().background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                if let error = session.errorMessage {
+                    Text(error).font(.footnote).foregroundStyle(.red).frame(maxWidth: .infinity, alignment: .leading)
+                }
+                Button {
+                    Task { await session.connect() }
+                } label: {
+                    HStack {
+                        if session.isChecking { ProgressView().tint(.black) }
+                        Text(session.isChecking ? "Connexion…" : "Se connecter").bold()
+                    }.frame(maxWidth: .infinity).padding()
+                }
+                .buttonStyle(.borderedProminent).tint(.orange).foregroundStyle(.black)
+                .disabled(session.isChecking || session.serverURL.isEmpty)
+            }
+            Spacer()
+            Text("Le serveur web reste utilisable en parallèle.").font(.caption).foregroundStyle(.secondary)
+        }.padding(24)
+    }
+}
+
+@MainActor
+final class LiveActivityManager: ObservableObject {
+    private var activity: Activity<AgyIslandAttributes>?
+    private var startedAt: Date?
+
+    init() { activity = Activity<AgyIslandAttributes>.activities.first }
+
+    func handle(event: AgyBridgeEvent) {
+        switch event.type {
+        case "turn_start": start(project: event.project ?? "AGY")
+        case "tool": update(project: event.project ?? "AGY", status: "Outil en cours", tool: event.tool)
+        case "delta": update(project: event.project ?? "AGY", status: "AGY répond…", tool: nil)
+        case "turn_end": finish(project: event.project ?? "AGY", success: event.success ?? true)
+        default: break
+        }
+    }
+
+    private func state(project: String, status: String, tool: String? = nil, busy: Bool, success: Bool = false) -> AgyIslandAttributes.ContentState {
+        let seconds = Int(Date().timeIntervalSince(startedAt ?? Date()))
+        return .init(isBusy: busy, projectName: project, statusText: status, activeTool: tool,
+                     elapsedTime: String(format: "%02d:%02d", seconds / 60, seconds % 60), isSuccess: success)
+    }
+    private func start(project: String) {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        startedAt = Date()
+        if let activity { Task { await activity.end(nil, dismissalPolicy: .immediate) } }
+        do {
+            activity = try Activity.request(attributes: AgyIslandAttributes(title: "AGY"),
+                                            content: .init(state: state(project: project, status: "AGY réfléchit…", busy: true), staleDate: nil),
+                                            pushType: nil)
+        } catch { print("Live Activity: \(error)") }
+    }
+    private func update(project: String, status: String, tool: String?) {
+        guard let activity else { return }
+        let next = state(project: project, status: status, tool: tool, busy: true)
+        Task { await activity.update(.init(state: next, staleDate: nil)) }
+    }
+    private func finish(project: String, success: Bool) {
+        guard let activity else { return }
+        let final = state(project: project, status: success ? "Tâche terminée" : "Tâche interrompue", busy: false, success: success)
+        Task {
+            await activity.end(.init(state: final, staleDate: nil), dismissalPolicy: .after(.now + 8))
+            self.activity = nil
+        }
+    }
+}
+
+struct AgyBridgeEvent: Decodable {
+    let type: String
+    let project: String?
+    let tool: String?
+    let success: Bool?
 }
