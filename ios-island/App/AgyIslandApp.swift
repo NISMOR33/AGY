@@ -123,6 +123,7 @@ struct RootView: View {
         Group {
             if session.isConnected, let url = session.normalizedURL {
                 AgyWebView(baseURL: url, token: session.token)
+                    .ignoresSafeArea(.container, edges: .all)
             } else {
                 LoginView()
             }

@@ -19,6 +19,9 @@ struct AgyWebView: UIViewRepresentable {
         config.websiteDataStore = .default()
         config.allowsInlineMediaPlayback = true
         let webView = WKWebView(frame: .zero, configuration: config)
+        webView.isOpaque = true
+        webView.backgroundColor = UIColor(red: 11.0 / 255.0, green: 12.0 / 255.0, blue: 14.0 / 255.0, alpha: 1)
+        webView.scrollView.backgroundColor = webView.backgroundColor
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
@@ -31,24 +34,14 @@ struct AgyWebView: UIViewRepresentable {
 
     static let bridgeScript = #"""
     (() => {
-      const NativeEventSource = window.EventSource;
-      window.EventSource = function(url, config) {
-        const source = new NativeEventSource(url, config);
-        if (String(url).includes('/api/chat/stream')) {
-          source.addEventListener('message', event => {
-            try {
-              const payload = JSON.parse(event.data);
-              const params = new URL(String(url), location.href).searchParams;
-              const out = { type: payload.type, project: params.get('p') || 'AGY' };
-              if (payload.type === 'tool') out.tool = payload.tool?.name || payload.tool?.tool || payload.tool?.command || 'outil';
-              if (payload.type === 'turn_end') out.success = !payload.assistantMsg?.error;
-              window.webkit.messageHandlers.agyNative.postMessage(out);
-            } catch (_) {}
-          });
-        }
-        return source;
-      };
-      window.EventSource.prototype = NativeEventSource.prototype;
+      document.documentElement.classList.add('agy-native-ios');
+      const style = document.createElement('style');
+      style.textContent = `
+        html, body { min-height: 100%; background: #0b0c0e !important; }
+        body { padding-top: env(safe-area-inset-top, 0px) !important; }
+        #mn { padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)) !important; }
+      `;
+      document.documentElement.appendChild(style);
     })();
     """#
 

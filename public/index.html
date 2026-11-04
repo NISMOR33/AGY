@@ -1713,13 +1713,6 @@
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
           </button>
-          <button class="mini-btn ghost" id="btn-pip" title="Îlot dynamique flottant (Picture-in-Picture)">
-            <svg class="ic sm" viewBox="0 0 24 24">
-              <rect x="2" y="6" width="20" height="12" rx="6" fill="none" stroke="currentColor" stroke-width="1.8"/>
-              <circle cx="7" cy="12" r="2.2" fill="currentColor"/>
-            </svg>
-            <span class="hide-mob">Îlot</span>
-          </button>
         </div>
       </div>
 
@@ -2124,6 +2117,14 @@
     let T = null, FIT = null, termES = null, activeTermTab = 'shell';
     let soundEnabled = localStorage.getItem('agy_bell') === '1';
     let termFontSize = +(localStorage.getItem('agy_fs') || 13);
+
+    // Pont natif iOS. Sans effet dans un navigateur normal.
+    function nativeActivity(type, project, extra = {}) {
+      try {
+        const bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.agyNative;
+        if (bridge) bridge.postMessage({ type, project: project || (cur && cur.n) || 'AGY', ...extra });
+      } catch (_) {}
+    }
 
     let K = new URLSearchParams(location.search).get('k') || localStorage.getItem('agyk') || sessionStorage.getItem('agyk') || '';
     if (K) {
@@ -2681,6 +2682,7 @@
         setBusyUi(!!h.busy);
         renderChat();
         if (wasBusy && !h.busy) {
+          nativeActivity('turn_end', pName, { success: true });
           clearInterval(chatPollTimer);
           chatPollTimer = null;
           refreshFiles();
@@ -2721,7 +2723,9 @@
           setBusyUi(!!ev.busy);
           renderChat();
           if (ev.busy) startChatPolling(p.n);
+          if (ev.busy) nativeActivity('turn_start', p.n);
         } else if (ev.type === 'turn_start') {
+          nativeActivity('turn_start', p.n);
           chatMessages = chatMessages.filter(x => !String(x.id).startsWith('temp-'));
           if (!chatMessages.some(x => x.id === ev.userMsg.id)) chatMessages.push(ev.userMsg);
           if (!chatMessages.some(x => x.id === ev.assistantMsg.id)) chatMessages.push(ev.assistantMsg);
@@ -2732,6 +2736,7 @@
           startChatPolling(p.n);
           renderChat();
         } else if (ev.type === 'delta') {
+          nativeActivity('delta', p.n);
           const m = chatMessages.find(x => x.id === ev.msgId);
           if (m) {
             m.text = ev.fullText;
@@ -2739,6 +2744,7 @@
             renderChat();
           }
         } else if (ev.type === 'tool') {
+          nativeActivity('tool', p.n, { tool: (ev.tool && ev.tool.name) || 'outil' });
           const m = chatMessages.find(x => x.id === ev.msgId);
           if (m) {
             m.tools = m.tools || [];
@@ -2749,6 +2755,7 @@
             refreshFiles();
           }
         } else if (ev.type === 'turn_end') {
+          nativeActivity('turn_end', p.n, { success: !(ev.assistantMsg && ev.assistantMsg.error) });
           clearInterval(chatPollTimer);
           chatPollTimer = null;
           const idx = chatMessages.findIndex(x => x.id === ev.msgId);
