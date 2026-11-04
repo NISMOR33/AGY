@@ -42,6 +42,19 @@ struct AgyWebView: UIViewRepresentable {
         #mn { padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)) !important; }
       `;
       document.documentElement.appendChild(style);
+      const projectName = () => {
+        const raw = document.querySelector('#btn-top-proj')?.innerText || 'AGY';
+        return raw.replace(/\s+/g, ' ').trim() || 'AGY';
+      };
+      const startNow = () => window.webkit.messageHandlers.agyNative.postMessage({
+        type: 'turn_start', project: projectName()
+      });
+      document.addEventListener('click', event => {
+        if (event.target && event.target.closest && event.target.closest('#send')) startNow();
+      }, true);
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && !event.shiftKey && event.target && event.target.id === 'in') startNow();
+      }, true);
     })();
     """#
 

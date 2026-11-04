@@ -2744,7 +2744,10 @@
             renderChat();
           }
         } else if (ev.type === 'tool') {
-          nativeActivity('tool', p.n, { tool: (ev.tool && ev.tool.name) || 'outil' });
+          nativeActivity('tool', p.n, {
+            tool: (ev.tool && ev.tool.name) || 'outil',
+            file: (ev.tool && ev.tool.path) || ''
+          });
           const m = chatMessages.find(x => x.id === ev.msgId);
           if (m) {
             m.tools = m.tools || [];
@@ -2851,6 +2854,7 @@
       // Feedback haptique & audio instantané
       playSound('sent');
       playHaptic('sent');
+      nativeActivity('turn_start', cur && cur.n);
 
       if (t === '/clear' || t === '/new') {
         await startNewThread();

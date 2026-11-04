@@ -8,6 +8,9 @@ public struct AgyIslandAttributes: ActivityAttributes {
         public var projectName: String
         public var statusText: String
         public var activeTool: String?
+        public var activeFile: String?
+        public var actionCount: Int
+        public var startedAt: Date?
         public var elapsedTime: String
         public var isSuccess: Bool
         
@@ -16,6 +19,9 @@ public struct AgyIslandAttributes: ActivityAttributes {
             projectName: String,
             statusText: String,
             activeTool: String? = nil,
+            activeFile: String? = nil,
+            actionCount: Int = 0,
+            startedAt: Date? = nil,
             elapsedTime: String = "00:00",
             isSuccess: Bool = false
         ) {
@@ -23,6 +29,9 @@ public struct AgyIslandAttributes: ActivityAttributes {
             self.projectName = projectName
             self.statusText = statusText
             self.activeTool = activeTool
+            self.activeFile = activeFile
+            self.actionCount = actionCount
+            self.startedAt = startedAt
             self.elapsedTime = elapsedTime
             self.isSuccess = isSuccess
         }
