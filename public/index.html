@@ -1472,7 +1472,7 @@
 
     <span class="sp"></span>
 
-    <button class="icon-btn" id="btn-tokens" title="Télémétrie & Tokens consommés">
+    <button class="icon-btn" id="btn-tokens" title="Tokens par modèle & Réinitialisation">
       <svg class="ic sm" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="9" />
         <path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-1.8-1" />
@@ -1482,18 +1482,12 @@
       <span id="hdr-tokens" class="mono">0 tok</span>
     </button>
 
-    <button class="icon-btn" id="btn-net" title="Accès 4G / QR Code Mobile">
+    <button class="icon-btn hide" id="btn-net" title="Accès 4G / QR Code Mobile">
       <span class="dot-live" id="net-dot"></span>
-      <svg class="ic sm" viewBox="0 0 24 24">
-        <rect x="3" y="3" width="7" height="7" />
-        <rect x="14" y="3" width="7" height="7" />
-        <rect x="14" y="14" width="7" height="7" />
-        <rect x="3" y="14" width="7" height="7" />
-      </svg>
-      <span id="net-lbl">4G / QR</span>
+      <span id="net-lbl">QR</span>
     </button>
 
-    <button class="icon-btn sq" id="btn-cfg" title="Modèle IA & Réglages agy">
+    <button class="icon-btn sq" id="btn-cfg" title="Paramètres, Modèles & Quotas Tokens">
       <svg class="ic" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="3" />
         <path
@@ -1652,17 +1646,9 @@
         <iframe id="prev-frame" title="Aperçu Live du projet"></iframe>
       </div>
 
-      <!-- BARRE D'ENVOI DE MESSAGE OPTIMISÉE MOBILE -->
+      <!-- BARRE D'ENVOI DE MESSAGE ÉPURÉE -->
       <div class="comp">
         <div id="pop" class="hide"></div>
-        <div class="mob-pills" id="mob-pills">
-          <button class="mob-pill" id="mp-convs" type="button">💬 Discussions</button>
-          <button class="mob-pill" id="mp-photo" type="button">📸 Photo / Capture</button>
-          <button class="mob-pill" id="mp-file" type="button">📁 @Fichier</button>
-          <button class="mob-pill" id="mp-cmd" type="button">⚡ /Commandes</button>
-          <button class="mob-pill" id="mp-prev" type="button">👁️ Aperçu Live</button>
-        </div>
-        <input type="file" id="cam-inp" accept="image/*" class="hide">
         <div class="keys hide" id="keys">
           <button data-k="y">y</button>
           <button data-k="n">n</button>
@@ -1675,20 +1661,6 @@
         </div>
         <div class="inp-box">
           <textarea id="in" rows="1" placeholder="Écris ton message à agy… (@fichier, /commande)" autocomplete="off"></textarea>
-          <button class="mic-btn" id="btn-cam" title="Envoyer une photo ou capture d'écran">
-            <svg class="ic" viewBox="0 0 24 24">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-              <circle cx="12" cy="13" r="4" />
-            </svg>
-          </button>
-          <button class="mic-btn" id="btn-mic" title="Dictée vocale">
-            <svg class="ic" viewBox="0 0 24 24">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-              <line x1="12" y1="19" x2="12" y2="23" />
-              <line x1="8" y1="23" x2="16" y2="23" />
-            </svg>
-          </button>
           <button class="send-btn" id="send">
             <span id="send-ic" style="display:inline-flex"><svg class="ic sm" viewBox="0 0 24 24">
                 <line x1="22" y1="2" x2="11" y2="13" />
@@ -1818,12 +1790,18 @@
   <!-- DIALOGUE 3 : RÉGLAGES AGY -->
   <dialog id="dlg-cfg">
     <h2>
-      <span>Modèle IA & Configuration</span>
+      <span>Paramètres & Modèles IA</span>
       <button class="icon-btn sq" id="cfg-cx"><svg class="ic sm" viewBox="0 0 24 24">
           <line x1="18" y1="6" x2="6" y2="18" />
           <line x1="6" y1="6" x2="18" y2="18" />
         </svg></button>
     </h2>
+
+    <div style="display:flex;gap:8px;margin:10px 0 6px;flex-wrap:wrap">
+      <button class="btn" id="btn-cfg-open-tokens" type="button" style="flex:1;justify-content:center">📊 Tokens par Modèle & Reset</button>
+      <button class="btn" id="btn-cfg-open-net" type="button" style="flex:1;justify-content:center">📱 QR Code & Liens d’accès</button>
+    </div>
+
     <label for="cfg-model">Modèle d’intelligence artificielle</label>
     <select id="cfg-model"></select>
 
@@ -1850,33 +1828,56 @@
     </div>
   </dialog>
 
-  <!-- DIALOGUE TOKENS & TÉLÉMÉTRIE -->
-  <dialog id="dlg-tokens">
+  <!-- DIALOGUE TOKENS PAR MODÈLE & RÉINITIALISATION -->
+  <dialog id="dlg-tokens" style="max-width:540px;width:94vw">
     <h2>
-      <span>📊 Télémétrie & Tokens agy</span>
+      <span>📊 Tokens par Modèle & Réinitialisations</span>
       <button class="icon-btn sq" id="tokens-cx"><svg class="ic sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </h2>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
+
+    <!-- Fenêtres de réinitialisation -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0">
       <div style="padding:10px;border:1px solid var(--ln);border-radius:10px;background:var(--bg)">
-        <div class="dm" style="font-size:11px">TOTAL TOKENS</div>
-        <div class="mono" id="tok-total" style="font-size:20px;font-weight:700;color:var(--or)">0</div>
+        <div class="dm" style="font-size:10.5px;font-weight:700">⏱️ FENÊTRE QUOTA (5H)</div>
+        <div class="mono" id="tok-reset-5h" style="font-size:13.5px;font-weight:700;color:var(--or);margin-top:3px">100% dispo</div>
+        <div class="dm mono" id="tok-reset-5h-sub" style="font-size:10.5px;margin-top:2px">Aucun quota bloqué</div>
       </div>
       <div style="padding:10px;border:1px solid var(--ln);border-radius:10px;background:var(--bg)">
-        <div class="dm" style="font-size:11px">CACHE CONTEXTE</div>
-        <div class="mono" id="tok-cache" style="font-size:20px;font-weight:700;color:var(--gr)">0</div>
-      </div>
-      <div style="padding:10px;border:1px solid var(--ln);border-radius:10px;background:var(--bg)">
-        <div class="dm" style="font-size:11px">PROMPT (ENTRÉE)</div>
-        <div class="mono" id="tok-in" style="font-size:14px;font-weight:600">0</div>
-      </div>
-      <div style="padding:10px;border:1px solid var(--ln);border-radius:10px;background:var(--bg)">
-        <div class="dm" style="font-size:11px">RÉFLEXION & SORTIE</div>
-        <div class="mono" id="tok-out" style="font-size:14px;font-weight:600">0</div>
+        <div class="dm" style="font-size:10.5px;font-weight:700">🔄 RESET QUOTIDIEN (00:00)</div>
+        <div class="mono" id="tok-reset-day" style="font-size:13.5px;font-weight:700;color:var(--gr);margin-top:3px">—</div>
+        <div class="dm mono" id="tok-reset-day-sub" style="font-size:10.5px;margin-top:2px">Réinitialisation à minuit</div>
       </div>
     </div>
-    <p class="dm" style="font-size:11.5px">Les métriques sont mesurées en temps réel par agy. Tape <code>/compact</code> pour alléger la fenêtre de contexte.</p>
-    <div class="row">
-      <button class="btn" id="btn-dlg-compact">Compacter le contexte (/compact)</button>
+
+    <!-- Résumé de la discussion active -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0">
+      <div style="padding:8px;border:1px solid var(--ln);border-radius:8px;background:var(--bg)">
+        <div class="dm" style="font-size:10px">DISCUSSION</div>
+        <div class="mono" id="tok-total" style="font-size:14px;font-weight:700;color:var(--or)">0</div>
+      </div>
+      <div style="padding:8px;border:1px solid var(--ln);border-radius:8px;background:var(--bg)">
+        <div class="dm" style="font-size:10px">CACHE</div>
+        <div class="mono" id="tok-cache" style="font-size:14px;font-weight:700;color:var(--gr)">0</div>
+      </div>
+      <div style="padding:8px;border:1px solid var(--ln);border-radius:8px;background:var(--bg)">
+        <div class="dm" style="font-size:10px">ENTRÉE</div>
+        <div class="mono" id="tok-in" style="font-size:13px;font-weight:600">0</div>
+      </div>
+      <div style="padding:8px;border:1px solid var(--ln);border-radius:8px;background:var(--bg)">
+        <div class="dm" style="font-size:10px">SORTIE</div>
+        <div class="mono" id="tok-out" style="font-size:13px;font-weight:600">0</div>
+      </div>
+    </div>
+
+    <!-- Liste détaillée par modèle -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0 6px">
+      <label style="margin:0;font-size:11.5px;font-weight:700">UTILISATION DÉTAILLÉE PAR MODÈLE IA</label>
+      <button class="mini-btn ghost" id="btn-tok-reset" type="button" title="Remettre les compteurs à zéro maintenant">↺ Réinitialiser compteur</button>
+    </div>
+    <div id="tok-models-list" style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;padding-right:2px"></div>
+
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="btn-dlg-compact">Compacter (/compact)</button>
       <button class="btn p" id="btn-dlg-tokens-close">Fermer</button>
     </div>
   </dialog>
@@ -2176,14 +2177,79 @@
       return { totalTokens, inputTokens, outputTokens, thinkingTokens, cacheReadTokens };
     }
 
+    function fmtCountdown(targetMs) {
+      if (!targetMs || targetMs <= Date.now()) return '100% dispo';
+      const diff = Math.max(0, targetMs - Date.now());
+      const h = Math.floor(diff / 3600000);
+      const m = Math.ceil((diff % 3600000) / 60000);
+      return `Dans ${h}h ${String(m).padStart(2, '0')}m`;
+    }
+
+    function fmtClock(targetMs) {
+      if (!targetMs) return '';
+      return new Date(targetMs).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    }
+
     function updateTokenUi(stats) {
-      projectTokenStats = stats && stats.totalTokens ? stats : computeClientTokenStats();
+      if (stats && (stats.totalTokens !== undefined || stats.byModel)) {
+        projectTokenStats = stats;
+      } else if (!projectTokenStats || !projectTokenStats.byModel) {
+        projectTokenStats = { ...computeClientTokenStats(), byModel: projectTokenStats.byModel || [], resetInfo: projectTokenStats.resetInfo || null };
+      }
       const hdr = $('#hdr-tokens');
       if (hdr) hdr.textContent = fmtTok(projectTokenStats.totalTokens) + ' tok';
-      if ($('#tok-total')) $('#tok-total').textContent = projectTokenStats.totalTokens.toLocaleString('fr-FR');
-      if ($('#tok-cache')) $('#tok-cache').textContent = projectTokenStats.cacheReadTokens.toLocaleString('fr-FR');
-      if ($('#tok-in')) $('#tok-in').textContent = projectTokenStats.inputTokens.toLocaleString('fr-FR');
-      if ($('#tok-out')) $('#tok-out').textContent = (projectTokenStats.outputTokens + projectTokenStats.thinkingTokens).toLocaleString('fr-FR');
+      if ($('#tok-total')) $('#tok-total').textContent = fmtTok(projectTokenStats.totalTokens);
+      if ($('#tok-cache')) $('#tok-cache').textContent = fmtTok(projectTokenStats.cacheReadTokens);
+      if ($('#tok-in')) $('#tok-in').textContent = fmtTok(projectTokenStats.inputTokens);
+      if ($('#tok-out')) $('#tok-out').textContent = fmtTok((projectTokenStats.outputTokens || 0) + (projectTokenStats.thinkingTokens || 0));
+
+      const ri = projectTokenStats.resetInfo;
+      if ($('#tok-reset-5h')) {
+        if (ri && ri.window5hResetAt && ri.window5hResetAt > Date.now()) {
+          $('#tok-reset-5h').textContent = fmtCountdown(ri.window5hResetAt);
+          if ($('#tok-reset-5h-sub')) $('#tok-reset-5h-sub').textContent = 'Reset à ' + fmtClock(ri.window5hResetAt);
+        } else {
+          $('#tok-reset-5h').textContent = '100% dispo';
+          if ($('#tok-reset-5h-sub')) $('#tok-reset-5h-sub').textContent = 'Fenêtre 5h libre';
+        }
+      }
+      if ($('#tok-reset-day') && ri && ri.dailyResetAt) {
+        $('#tok-reset-day').textContent = fmtCountdown(ri.dailyResetAt);
+        if ($('#tok-reset-day-sub')) $('#tok-reset-day-sub').textContent = 'Reset quotidien à 00:00';
+      }
+
+      const listEl = $('#tok-models-list');
+      if (listEl) {
+        const models = projectTokenStats.byModel || [];
+        if (!models.length) {
+          listEl.innerHTML = '<div class="dm pad" style="font-size:12px">Aucune donnée modèle disponible.</div>';
+        } else {
+          const maxTok = Math.max(100000, ...models.map(x => x.totalTokens || 0));
+          listEl.innerHTML = models.map(m => {
+            const pct = Math.min(100, Math.round(((m.totalTokens || 0) / maxTok) * 100));
+            const resetStr = (m.reset5hAt && m.reset5hAt > Date.now())
+              ? `Reset 5h : ${fmtClock(m.reset5hAt)} (${fmtCountdown(m.reset5hAt)})`
+              : 'Quota 5h : 100% dispo';
+            return `<div style="padding:10px;border:1px solid var(--ln);border-radius:10px;background:var(--bg)">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+                <b style="font-size:12.5px;color:var(--tx)">${E(m.label || m.id)}</b>
+                <span class="mono" style="font-size:11px;color:var(--or);font-weight:700">${m.turns || 0} req · ${fmtTok(m.totalTokens)} tok</span>
+              </div>
+              <div style="height:5px;background:var(--ln);border-radius:99px;overflow:hidden;margin:6px 0">
+                <div style="height:100%;width:${pct}%;background:var(--or);border-radius:99px"></div>
+              </div>
+              <div class="mono" style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;font-size:10.5px;color:var(--dm)">
+                <span>Fenêtre 5h : <b style="color:var(--tx)">${fmtTok(m.window5hTokens)}</b> (${m.window5hTurns || 0} req)</span>
+                <span>24h : <b style="color:var(--tx)">${fmtTok(m.todayTokens)}</b></span>
+                <span style="color:var(--gr)">${E(resetStr)}</span>
+              </div>
+              <div class="mono" style="font-size:10px;color:var(--dm);margin-top:3px">
+                Entrée : ${fmtTok(m.inputTokens)} · Sortie : ${fmtTok(m.outputTokens)} · Cache : ${fmtTok(m.cacheReadTokens)}
+              </div>
+            </div>`;
+          }).join('');
+        }
+      }
     }
 
     function renderChat() {
@@ -2196,11 +2262,6 @@
               <h3>Projet actif : ${E(cur.n)}</h3>
               <p class="mono">${E(cur.d)}</p>
             </div>
-          </div>
-          <div class="chips">
-            <button class="chip" data-prompt="Analyse les fichiers de ce projet et résume son architecture.">Analyser le projet</button>
-            <button class="chip" data-prompt="Crée une page web moderne et responsive dans ce projet.">Créer une interface moderne</button>
-            <button class="chip" data-prompt="Vérifie le code, corrige les bugs éventuels et améliore le design.">Améliorer & corriger</button>
           </div>
         </div>
       `;
@@ -3068,7 +3129,25 @@
     };
     $('#btn-reff').onclick = () => refreshFiles();
 
-    if ($('#btn-tokens')) $('#btn-tokens').onclick = () => { updateTokenUi(); $('#dlg-tokens').showModal(); };
+    async function openTokensModal() {
+      if (REAL && cur && cur.n) {
+        try {
+          const h = await api('chat/history?p=' + encodeURIComponent(cur.n));
+          if (h && h.tokenStats) updateTokenUi(h.tokenStats);
+        } catch {}
+      } else {
+        updateTokenUi();
+      }
+      $('#dlg-tokens').showModal();
+    }
+    if ($('#btn-tokens')) $('#btn-tokens').onclick = openTokensModal;
+    if ($('#btn-cfg-open-tokens')) $('#btn-cfg-open-tokens').onclick = () => { $('#dlg-cfg').close(); openTokensModal(); };
+    if ($('#btn-cfg-open-net')) $('#btn-cfg-open-net').onclick = () => { $('#dlg-cfg').close(); $('#btn-net').click(); };
+    if ($('#btn-tok-reset')) $('#btn-tok-reset').onclick = async () => {
+      if (!REAL || !cur.n) return;
+      const r = await api('tokens/reset', { p: cur.n, restore: false });
+      if (r && r.tokenStats) updateTokenUi(r.tokenStats);
+    };
     if ($('#tokens-cx')) $('#tokens-cx').onclick = $('#btn-dlg-tokens-close').onclick = () => $('#dlg-tokens').close();
     if ($('#btn-dlg-compact')) $('#btn-dlg-compact').onclick = () => { $('#dlg-tokens').close(); handleSend('/compact'); };
     if ($('#convs-cx')) $('#convs-cx').onclick = $('#btn-convs-close').onclick = () => $('#dlg-convs').close();
