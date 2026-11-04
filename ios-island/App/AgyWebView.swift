@@ -71,6 +71,12 @@ struct AgyWebView: UIViewRepresentable {
             Task { @MainActor in parent.session.errorMessage = error.localizedDescription; parent.session.isConnected = false }
         }
 
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            Task { @MainActor in
+                parent.activity.handle(event: AgyBridgeEvent(type: "app_ready", project: "AGY", tool: nil, success: nil))
+            }
+        }
+
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
                      decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             if let url = navigationAction.request.url,

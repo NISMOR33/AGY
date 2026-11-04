@@ -182,7 +182,8 @@ final class LiveActivityManager: ObservableObject {
 
     func handle(event: AgyBridgeEvent) {
         switch event.type {
-        case "turn_start": start(project: event.project ?? "AGY")
+        case "app_ready": ensureActivity(project: event.project ?? "AGY")
+        case "turn_start": start(project: event.project ?? "AGY", busy: true, status: "AGY réfléchit…")
         case "tool": update(project: event.project ?? "AGY", status: "Outil en cours", tool: event.tool)
         case "delta": update(project: event.project ?? "AGY", status: "AGY répond…", tool: nil)
         case "turn_end": finish(project: event.project ?? "AGY", success: event.success ?? true)
@@ -195,13 +196,23 @@ final class LiveActivityManager: ObservableObject {
         return .init(isBusy: busy, projectName: project, statusText: status, activeTool: tool,
                      elapsedTime: String(format: "%02d:%02d", seconds / 60, seconds % 60), isSuccess: success)
     }
-    private func start(project: String) {
+    private func ensureActivity(project: String) {
+        if activity == nil {
+            start(project: project, busy: false, status: "AGY connecté")
+        }
+    }
+
+    private func start(project: String, busy: Bool, status: String) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         startedAt = Date()
-        if let activity { Task { await activity.end(nil, dismissalPolicy: .immediate) } }
+        if let activity {
+            let next = state(project: project, status: status, busy: busy)
+            Task { await activity.update(.init(state: next, staleDate: nil)) }
+            return
+        }
         do {
             activity = try Activity.request(attributes: AgyIslandAttributes(title: "AGY"),
-                                            content: .init(state: state(project: project, status: "AGY réfléchit…", busy: true), staleDate: nil),
+                                            content: .init(state: state(project: project, status: status, busy: busy), staleDate: nil),
                                             pushType: nil)
         } catch { print("Live Activity: \(error)") }
     }
@@ -225,4 +236,11 @@ struct AgyBridgeEvent: Decodable {
     let project: String?
     let tool: String?
     let success: Bool?
+
+    init(type: String, project: String?, tool: String?, success: Bool?) {
+        self.type = type
+        self.project = project
+        self.tool = tool
+        self.success = success
+    }
 }
