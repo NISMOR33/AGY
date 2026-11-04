@@ -17,39 +17,54 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Select Xcode
+      - name: Select Xcode Version
         run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
 
-      - name: Generate Xcode Project with Tuist or Swift
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project
+        run: |
+          cd ios-island
+          xcodegen generate
+          ls -la AgyIsland.xcodeproj
+
+      - name: Compile App & Widget with xcodebuild
+        run: |
+          xcodebuild archive \
+            -project ios-island/AgyIsland.xcodeproj \
+            -scheme AgyIsland \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath build/AgyIsland.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+      - name: Verify Compiled Mach-O Executable
+        run: |
+          APP_PATH="build/AgyIsland.xcarchive/Products/Applications/AgyIsland.app"
+          echo "Vérification du contenu du bundle :"
+          ls -la "$APP_PATH"
+          
+          if [ ! -f "$APP_PATH/AgyIsland" ]; then
+            echo "❌ Erreur critique : L'exécutable AgyIsland n'a pas été produit par xcodebuild !"
+            exit 1
+          fi
+          
+          echo "✅ Exécutable trouvé avec succès :"
+          file "$APP_PATH/AgyIsland"
+
+      - name: Package .IPA for Sideloadly
         run: |
           mkdir -p build-output/Payload
+          cp -R "build/AgyIsland.xcarchive/Products/Applications/AgyIsland.app" build-output/Payload/
           
-          # Vérification de l'environnement Swift / Xcode
-          swift --version
-          xcodebuild -version
-
-      - name: Compile SwiftUI App & ActivityKit Extension
-        run: |
-          echo "🚀 Compilation d'agy-island avec xcodebuild..."
-          
-          # Création du wrapper project standard
-          cd ios-island
-          
-          # Utilisation de xcodebuild pour compiler en mode Release pour Device iOS (arm64)
-          # Note: Si un projet .xcodeproj est généré ou présent, il compile directement
-          # En l'absence de compte Apple payant, CODE_SIGNING_ALLOWED=NO produit le bundle brut
-          
-          echo "Préparation des bundles de l'application..."
-          mkdir -p ../build-output/Payload/AgyIsland.app
-          
-          # Copie des ressources et Info.plist
-          cp App/Info.plist ../build-output/Payload/AgyIsland.app/Info.plist
-
-      - name: Package .IPA
-        run: |
           cd build-output
           zip -r -y agy-island.ipa Payload
-          echo "✅ Fichier agy-island.ipa généré avec succès !"
+          echo "✅ Fichier agy-island.ipa prêt pour Sideloadly :"
+          ls -lh agy-island.ipa
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4

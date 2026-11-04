@@ -1,0 +1,47 @@
+name: AgyIsland
+options:
+  bundleIdPrefix: com.agy
+  deploymentTarget:
+    iOS: 16.1
+  xcodeVersion: '15.4'
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: "16.1"
+    SWIFT_VERSION: "5.9"
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+    AD_HOC_CODE_SIGNING_ALLOWED: "YES"
+
+targets:
+  AgyIsland:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+      - path: Shared
+    settings:
+      base:
+        INFOPLIST_FILE: App/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.agy.island
+        PRODUCT_NAME: AgyIsland
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_KEY_CFBundleExecutable: NO
+    dependencies:
+      - target: AgyIslandWidgetExtension
+
+  AgyIslandWidgetExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widget
+      - path: Shared
+    settings:
+      base:
+        INFOPLIST_FILE: Widget/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.agy.island.widget
+        PRODUCT_NAME: AgyIslandWidgetExtension
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_KEY_CFBundleExecutable: NO

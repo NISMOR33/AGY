@@ -5,15 +5,15 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleDisplayName</key>
-    <string>agy Island Widget</string>
+    <string>Agy Island Widget</string>
     <key>CFBundleExecutable</key>
-    <string>$(EXECUTABLE_NAME)</string>
+    <string>AgyIslandWidgetExtension</string>
     <key>CFBundleIdentifier</key>
     <string>com.agy.island.widget</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>$(PRODUCT_NAME)</string>
+    <string>AgyIslandWidgetExtension</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>CFBundleShortVersionString</key>
