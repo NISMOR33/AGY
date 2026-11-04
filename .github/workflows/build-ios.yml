@@ -26,6 +26,8 @@ jobs:
       - name: Generate Xcode Project
         run: |
           cd ios-island
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" Widget/Info.plist
           xcodegen generate
           # XcodeGen 2.46 defaults to PBX project format 77, which Xcode 15.4 cannot open.
           # Force the generated project metadata to Xcode 15-compatible format.
@@ -74,6 +76,6 @@ jobs:
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: agy-island-ios-ipa
+          name: agy-island-ios-ipa-build-${{ github.run_number }}
           path: build-output/agy-island.ipa
           retention-days: 14

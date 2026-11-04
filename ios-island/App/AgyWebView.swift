@@ -55,6 +55,8 @@ struct AgyWebView: UIViewRepresentable {
             components.queryItems = [URLQueryItem(name: "k", value: parent.token), URLQueryItem(name: "app", value: "ios")]
             var request = URLRequest(url: components.url!)
             request.setValue(parent.token, forHTTPHeaderField: "x-agy-token")
+            request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+            request.setValue("no-cache, no-store, must-revalidate", forHTTPHeaderField: "Cache-Control")
             webView.load(request)
         }
 
