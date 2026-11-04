@@ -1,4 +1,4 @@
-name: Build iOS Dynamic Island (.ipa)
+name: Build AGY iOS (.ipa)
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-ipa:
-    name: Build iOS App & Dynamic Island Widget
+    name: Build AGY iOS App
     runs-on: macos-14
 
     steps:
@@ -27,7 +27,6 @@ jobs:
         run: |
           cd ios-island
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" App/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" Widget/Info.plist
           xcodegen generate
           # XcodeGen 2.46 defaults to PBX project format 77, which Xcode 15.4 cannot open.
           # Force the generated project metadata to Xcode 15-compatible format.
@@ -36,7 +35,7 @@ jobs:
           grep -E 'objectVersion|compatibilityVersion' AgyIsland.xcodeproj/project.pbxproj
           ls -la AgyIsland.xcodeproj
 
-      - name: Compile App & Widget with xcodebuild
+      - name: Compile iOS App with xcodebuild
         run: |
           xcodebuild archive \
             -project ios-island/AgyIsland.xcodeproj \
@@ -76,6 +75,6 @@ jobs:
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: agy-island-ios-ipa-build-${{ github.run_number }}
+          name: agy-ios-ipa-build-${{ github.run_number }}
           path: build-output/agy-island.ipa
           retention-days: 14

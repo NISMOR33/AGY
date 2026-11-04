@@ -10,9 +10,6 @@ serveur Node simultanément, avec les mêmes projets, conversations et fichiers.
 - code d'accès conservé dans le trousseau sécurisé iOS (Keychain) ;
 - console complète chargée dans `WKWebView` : chat en streaming, projets,
   fichiers, terminal, Git, réglages et aperçus ;
-- pont JavaScript natif qui traduit les événements SSE réels du chat en Live
-  Activity et Dynamic Island ;
-- extension WidgetKit partagée avec l'application ;
 - IPA non signé compilé par GitHub Actions puis resigné par Sideloadly.
 
 ## Installation
@@ -23,6 +20,4 @@ serveur Node simultanément, avec les mêmes projets, conversations et fichiers.
 3. Extraire `agy-island.ipa`, puis l'installer avec Sideloadly.
 4. Dans l'app, saisir l'URL HTTPS Cloudflare du serveur et le code d'accès AGY.
 
-Le serveur doit rester démarré pour utiliser l'application. Les mises à jour du
-Dynamic Island sont locales et fonctionnent pendant que l'application est
-active ; des mises à jour après suspension complète nécessiteraient APNs.
+Le serveur doit rester démarré pour utiliser l'application.

@@ -4,7 +4,6 @@ import UniformTypeIdentifiers
 
 struct AgyWebView: UIViewRepresentable {
     @EnvironmentObject var session: AgySession
-    @EnvironmentObject var activity: LiveActivityManager
     let baseURL: URL
     let token: String
 
@@ -12,7 +11,6 @@ struct AgyWebView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> WKWebView {
         let controller = WKUserContentController()
-        controller.add(context.coordinator, name: "agyNative")
         controller.addUserScript(WKUserScript(source: Self.bridgeScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let config = WKWebViewConfiguration()
         config.userContentController = controller
@@ -42,23 +40,10 @@ struct AgyWebView: UIViewRepresentable {
         #mn { padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)) !important; }
       `;
       document.documentElement.appendChild(style);
-      const projectName = () => {
-        const raw = document.querySelector('#btn-top-proj')?.innerText || 'AGY';
-        return raw.replace(/\s+/g, ' ').trim() || 'AGY';
-      };
-      const startNow = () => window.webkit.messageHandlers.agyNative.postMessage({
-        type: 'turn_start', project: projectName()
-      });
-      document.addEventListener('click', event => {
-        if (event.target && event.target.closest && event.target.closest('#send')) startNow();
-      }, true);
-      document.addEventListener('keydown', event => {
-        if (event.key === 'Enter' && !event.shiftKey && event.target && event.target.id === 'in') startNow();
-      }, true);
     })();
     """#
 
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, UIDocumentPickerDelegate {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, UIDocumentPickerDelegate {
         let parent: AgyWebView
         init(_ parent: AgyWebView) { self.parent = parent }
 
@@ -73,21 +58,8 @@ struct AgyWebView: UIViewRepresentable {
             webView.load(request)
         }
 
-        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-            guard let object = message.body as? [String: Any],
-                  let data = try? JSONSerialization.data(withJSONObject: object),
-                  let event = try? JSONDecoder().decode(AgyBridgeEvent.self, from: data) else { return }
-            Task { @MainActor in parent.activity.handle(event: event) }
-        }
-
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             Task { @MainActor in parent.session.errorMessage = error.localizedDescription; parent.session.isConnected = false }
-        }
-
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            Task { @MainActor in
-                parent.activity.handle(event: AgyBridgeEvent(type: "app_ready", project: "AGY", tool: nil, success: nil))
-            }
         }
 
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,

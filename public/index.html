@@ -2118,13 +2118,6 @@
     let soundEnabled = localStorage.getItem('agy_bell') === '1';
     let termFontSize = +(localStorage.getItem('agy_fs') || 13);
 
-    // Pont natif iOS. Sans effet dans un navigateur normal.
-    function nativeActivity(type, project, extra = {}) {
-      try {
-        const bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.agyNative;
-        if (bridge) bridge.postMessage({ type, project: project || (cur && cur.n) || 'AGY', ...extra });
-      } catch (_) {}
-    }
 
     let K = new URLSearchParams(location.search).get('k') || localStorage.getItem('agyk') || sessionStorage.getItem('agyk') || '';
     if (K) {
@@ -2682,7 +2675,6 @@
         setBusyUi(!!h.busy);
         renderChat();
         if (wasBusy && !h.busy) {
-          nativeActivity('turn_end', pName, { success: true });
           clearInterval(chatPollTimer);
           chatPollTimer = null;
           refreshFiles();
@@ -2723,9 +2715,7 @@
           setBusyUi(!!ev.busy);
           renderChat();
           if (ev.busy) startChatPolling(p.n);
-          if (ev.busy) nativeActivity('turn_start', p.n);
         } else if (ev.type === 'turn_start') {
-          nativeActivity('turn_start', p.n);
           chatMessages = chatMessages.filter(x => !String(x.id).startsWith('temp-'));
           if (!chatMessages.some(x => x.id === ev.userMsg.id)) chatMessages.push(ev.userMsg);
           if (!chatMessages.some(x => x.id === ev.assistantMsg.id)) chatMessages.push(ev.assistantMsg);
@@ -2736,7 +2726,6 @@
           startChatPolling(p.n);
           renderChat();
         } else if (ev.type === 'delta') {
-          nativeActivity('delta', p.n);
           const m = chatMessages.find(x => x.id === ev.msgId);
           if (m) {
             m.text = ev.fullText;
@@ -2744,10 +2733,6 @@
             renderChat();
           }
         } else if (ev.type === 'tool') {
-          nativeActivity('tool', p.n, {
-            tool: (ev.tool && ev.tool.name) || 'outil',
-            file: (ev.tool && ev.tool.path) || ''
-          });
           const m = chatMessages.find(x => x.id === ev.msgId);
           if (m) {
             m.tools = m.tools || [];
@@ -2758,7 +2743,6 @@
             refreshFiles();
           }
         } else if (ev.type === 'turn_end') {
-          nativeActivity('turn_end', p.n, { success: !(ev.assistantMsg && ev.assistantMsg.error) });
           clearInterval(chatPollTimer);
           chatPollTimer = null;
           const idx = chatMessages.findIndex(x => x.id === ev.msgId);
@@ -2854,7 +2838,6 @@
       // Feedback haptique & audio instantané
       playSound('sent');
       playHaptic('sent');
-      nativeActivity('turn_start', cur && cur.n);
 
       if (t === '/clear' || t === '/new') {
         await startNewThread();

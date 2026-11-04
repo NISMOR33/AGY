@@ -1,17 +1,14 @@
 import SwiftUI
-import ActivityKit
 import Security
 
 @main
 struct AgyIslandApp: App {
     @StateObject private var session = AgySession()
-    @StateObject private var activity = LiveActivityManager()
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(session)
-                .environmentObject(activity)
         }
     }
 }
@@ -170,87 +167,5 @@ struct LoginView: View {
             Spacer()
             Text("Le serveur web reste utilisable en parallèle.").font(.caption).foregroundStyle(.secondary)
         }.padding(24)
-    }
-}
-
-@MainActor
-final class LiveActivityManager: ObservableObject {
-    private var activity: Activity<AgyIslandAttributes>?
-    private var startedAt: Date?
-    private var actionCount = 0
-    private var currentFile: String?
-
-    init() { activity = Activity<AgyIslandAttributes>.activities.first }
-
-    func handle(event: AgyBridgeEvent) {
-        switch event.type {
-        case "app_ready": ensureActivity(project: event.project ?? "AGY")
-        case "turn_start": start(project: event.project ?? "AGY", busy: true, status: "AGY réfléchit…")
-        case "tool":
-            actionCount += 1
-            currentFile = event.file?.isEmpty == false ? event.file : currentFile
-            update(project: event.project ?? "AGY", status: "Action en cours", tool: event.tool, file: currentFile)
-        case "delta": update(project: event.project ?? "AGY", status: "AGY répond…", tool: nil)
-        case "turn_end": finish(project: event.project ?? "AGY", success: event.success ?? true)
-        default: break
-        }
-    }
-
-    private func state(project: String, status: String, tool: String? = nil, file: String? = nil, busy: Bool, success: Bool = false) -> AgyIslandAttributes.ContentState {
-        let seconds = Int(Date().timeIntervalSince(startedAt ?? Date()))
-        return .init(isBusy: busy, projectName: project, statusText: status, activeTool: tool,
-                     activeFile: file, actionCount: actionCount, startedAt: busy ? startedAt : nil,
-                     elapsedTime: String(format: "%02d:%02d", seconds / 60, seconds % 60), isSuccess: success)
-    }
-    private func ensureActivity(project: String) {
-        if activity == nil {
-            start(project: project, busy: false, status: "AGY connecté")
-        }
-    }
-
-    private func start(project: String, busy: Bool, status: String) {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        startedAt = Date()
-        actionCount = 0
-        currentFile = nil
-        if let activity {
-            let next = state(project: project, status: status, busy: busy)
-            Task { await activity.update(.init(state: next, staleDate: nil)) }
-            return
-        }
-        do {
-            activity = try Activity.request(attributes: AgyIslandAttributes(title: "AGY"),
-                                            content: .init(state: state(project: project, status: status, busy: busy), staleDate: nil),
-                                            pushType: nil)
-        } catch { print("Live Activity: \(error)") }
-    }
-    private func update(project: String, status: String, tool: String?, file: String? = nil) {
-        guard let activity else { return }
-        let next = state(project: project, status: status, tool: tool, file: file, busy: true)
-        Task { await activity.update(.init(state: next, staleDate: nil)) }
-    }
-    private func finish(project: String, success: Bool) {
-        guard let activity else { return }
-        let final = state(project: project, status: success ? "Tâche terminée" : "Tâche interrompue", busy: false, success: success)
-        Task {
-            await activity.end(.init(state: final, staleDate: nil), dismissalPolicy: .after(.now + 8))
-            self.activity = nil
-        }
-    }
-}
-
-struct AgyBridgeEvent: Decodable {
-    let type: String
-    let project: String?
-    let tool: String?
-    let file: String?
-    let success: Bool?
-
-    init(type: String, project: String?, tool: String?, file: String? = nil, success: Bool?) {
-        self.type = type
-        self.project = project
-        self.tool = tool
-        self.file = file
-        self.success = success
     }
 }

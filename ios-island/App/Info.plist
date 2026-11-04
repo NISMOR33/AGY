@@ -22,10 +22,6 @@
     <string>2</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
-    <key>NSSupportsLiveActivities</key>
-    <true/>
-    <key>NSSupportsLiveActivitiesFrequentUpdates</key>
-    <true/>
     <key>NSLocalNetworkUsageDescription</key>
     <string>AGY se connecte à votre serveur local pour afficher la console.</string>
     <key>NSAppTransportSecurity</key>
