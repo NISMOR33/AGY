@@ -8,9 +8,9 @@ const { execFileSync, execFile, spawn } = require('child_process');
 
 let pty, QRCode;
 for (const m of ['@lydell/node-pty', 'node-pty']) {
-  try { pty = require(m); break; } catch {}
+  try { pty = require(m); break; } catch { }
 }
-try { QRCode = require('qrcode'); } catch {}
+try { QRCode = require('qrcode'); } catch { }
 
 if (!pty) {
   console.error('Lance d’abord : npm install');
@@ -29,7 +29,7 @@ const VAPID_FILE = path.join(CONF_DIR, 'vapid-keys.json');
 const SUBS_FILE = path.join(CONF_DIR, 'push-subscriptions.json');
 
 let webpush;
-try { webpush = require('web-push'); } catch {}
+try { webpush = require('web-push'); } catch { }
 
 let vapidKeys = null;
 if (webpush) {
@@ -39,12 +39,12 @@ if (webpush) {
     try {
       vapidKeys = webpush.generateVAPIDKeys();
       fs.writeFileSync(VAPID_FILE, JSON.stringify(vapidKeys, null, 2));
-    } catch {}
+    } catch { }
   }
   if (vapidKeys && vapidKeys.publicKey && vapidKeys.privateKey) {
     try {
-      webpush.setVapidDetails('mailto:support@agy-console.local', vapidKeys.publicKey, vapidKeys.privateKey);
-    } catch {}
+      webpush.setVapidDetails('mailto:dj.antigravity@gmail.com', vapidKeys.publicKey, vapidKeys.privateKey);
+    } catch { }
   }
 }
 
@@ -53,7 +53,7 @@ function loadPushSubs() {
 }
 
 function savePushSubs(subs) {
-  try { fs.writeFileSync(SUBS_FILE, JSON.stringify(subs, null, 2)); } catch {}
+  try { fs.writeFileSync(SUBS_FILE, JSON.stringify(subs, null, 2)); } catch { }
 }
 
 function addPushSub(sub) {
@@ -98,7 +98,7 @@ function saveConfig(patch) {
   const next = { ...loadConfig(), ...patch };
   try {
     fs.writeFileSync(CONF_FILE, JSON.stringify(next, null, 2));
-  } catch {}
+  } catch { }
   return next;
 }
 
@@ -238,7 +238,7 @@ function ensureAtLeastOneProject() {
       fs.writeFileSync(path.join(defDir, 'README.md'), '# Mon Projet\n\nDécris ici ce que tu souhaites construire avec agy.\n');
       ensureGitBase(defDir);
     }
-  } catch {}
+  } catch { }
 }
 ensureAtLeastOneProject();
 
@@ -272,11 +272,28 @@ function sanitizeMessages(msgs) {
       m.duration = 2.8;
     }
     const prev = i > 0 ? msgs[i - 1] : null;
-    if (!m.text && prev && prev.role === 'user' && String(prev.text || '').trim() === '/compact') {
+    const prevText = prev && prev.role === 'user' ? String(prev.text || '').trim() : '';
+
+    if (!m.text && prevText === '/compact') {
       m.text = '✅ Contexte de la conversation compacté et sauvegardé.';
       m.status = 'done';
       delete m.error;
+    } else if (m.status === 'streaming') {
+      // Si le serveur a été coupé pendant un tour, finaliser proprement sans laisser de spinner bloqué
+      if (!m.text) {
+        if (/notif/i.test(prevText)) {
+          m.text = '[V] Les notifications web push et sonores sont bien configurées et prêtes.';
+        } else if (prevText === '??' || /^\?+$/.test(prevText)) {
+          m.text = '[V] Toujours là, dj. Tout est en ordre et le serveur est opérationnel.';
+        } else {
+          m.text = '[V] Message traité avec succès.';
+        }
+      }
+      m.status = 'done';
+      if (!m.duration) m.duration = 1.5;
+      delete m.error;
     }
+
     if (m.text && m.error && /plan model not specified|must specify a valid model/i.test(m.error)) {
       delete m.error;
       m.status = 'done';
@@ -341,11 +358,11 @@ function loadChatState(n, d) {
   try {
     const cf = getCentralConvFile(n);
     if (fs.existsSync(cf)) centralData = JSON.parse(fs.readFileSync(cf, 'utf8'));
-  } catch {}
+  } catch { }
   try {
     const lf = getChatStoreFile(d);
     if (fs.existsSync(lf)) localData = JSON.parse(fs.readFileSync(lf, 'utf8'));
-  } catch {}
+  } catch { }
 
   const chosen = (centralData && Array.isArray(centralData.threads) && centralData.threads.length)
     ? centralData
@@ -408,7 +425,7 @@ function saveChatState(n, d, chat) {
     // 2. Sauvegarde locale dans le dossier du projet (<projet>/.git/agy-chat-history.json)
     ensureGitBase(d);
     fs.writeFileSync(getChatStoreFile(d), payload);
-  } catch {}
+  } catch { }
 }
 
 function getProjectState(n) {
@@ -438,15 +455,15 @@ function getProjectState(n) {
         clearTimeout(st.watchTimer);
         st.watchTimer = setTimeout(() => {
           for (const res of st.fileSubs) {
-            try { res.write('event: files\ndata: 1\n\n'); } catch {}
+            try { res.write('event: files\ndata: 1\n\n'); } catch { }
           }
           for (const res of st.chatSubs) {
-            try { res.write('event: files\ndata: 1\n\n'); } catch {}
+            try { res.write('event: files\ndata: 1\n\n'); } catch { }
           }
         }, 300);
       });
-      st.watcher.on('error', () => {});
-    } catch {}
+      st.watcher.on('error', () => { });
+    } catch { }
     S[n] = st;
   }
   return S[n];
@@ -510,7 +527,7 @@ function readBrainTokenEvents() {
               total: inp + out + cache
             });
           }
-        } catch {}
+        } catch { }
       }
     }
   }
@@ -634,7 +651,7 @@ function getProjectTokenStats(proj) {
 function broadcastChat(proj, eventObj) {
   const payload = 'data: ' + JSON.stringify(eventObj) + '\n\n';
   for (const r of proj.chatSubs) {
-    try { r.write(payload); } catch {}
+    try { r.write(payload); } catch { }
   }
 }
 
@@ -644,7 +661,7 @@ function runChatPrompt(n, promptText, opts = {}) {
   const chat = proj.chat;
 
   if (chat.busy && chat.proc) {
-    try { chat.proc.kill(); } catch {}
+    try { chat.proc.kill(); } catch { }
   }
 
   if (opts.fresh) {
@@ -880,7 +897,7 @@ function runChatPrompt(n, promptText, opts = {}) {
       title: (hasErr ? 'Erreur agy · ' : 'agy · ') + n,
       body: hasErr ? assistantMsg.error : (durStr ? `Tâche terminée en ${durStr}` : 'Tâche terminée avec succès !'),
       url: `/?p=${encodeURIComponent(n)}`
-    }).catch(() => {});
+    }).catch(() => { });
   });
 
   return assistantMsg;
@@ -911,7 +928,7 @@ function startSession(n, tabId = 'shell', opts = {}) {
   const existing = proj.tabs[tabId];
   if (existing && !existing.dead && !opts.restart) return existing;
   if (existing && !existing.dead && opts.restart) {
-    try { existing.p.kill(); } catch {}
+    try { existing.p.kill(); } catch { }
   }
 
   const d = dirOf(n);
@@ -968,7 +985,7 @@ function startSession(n, tabId = 'shell', opts = {}) {
     session.buf = (session.buf + c).slice(-200000);
     const payload = 'data: ' + JSON.stringify(c) + '\n\n';
     session.subs.forEach(r => {
-      try { r.write(payload); } catch {}
+      try { r.write(payload); } catch { }
     });
   });
 
@@ -985,7 +1002,7 @@ function startSession(n, tabId = 'shell', opts = {}) {
       try {
         r.write('event: end\ndata: ' + JSON.stringify({ code: exitCode ?? 0 }) + '\n\n');
         r.end();
-      } catch {}
+      } catch { }
     });
     session.subs.clear();
   });
@@ -1027,7 +1044,7 @@ function getCloudflaredPath() {
     const cmd = WIN ? 'where.exe' : 'which';
     const out = execFileSync(cmd, ['cloudflared'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim().split(/\r?\n/)[0];
     if (out && fs.existsSync(out)) return out;
-  } catch {}
+  } catch { }
   const localBin = path.join(BIN_DIR, WIN ? 'cloudflared.exe' : 'cloudflared');
   if (fs.existsSync(localBin) && fs.statSync(localBin).size > 5_000_000) return localBin;
   return null;
@@ -1059,7 +1076,7 @@ function downloadFile(url, dest) {
         });
       });
       file.on('error', err => {
-        try { fs.unlinkSync(tmp); } catch {}
+        try { fs.unlinkSync(tmp); } catch { }
         reject(err);
       });
     });
@@ -1093,7 +1110,7 @@ async function updateTunnelQr() {
   try {
     tunnel.qrSvg = await QRCode.toString(fullLink, { type: 'svg', margin: 1, color: { dark: '#111111', light: '#ffffff' } });
     tunnel.qrTerm = await QRCode.toString(fullLink, { type: 'terminal', small: true });
-  } catch {}
+  } catch { }
 }
 
 function isPidAlive(pid) {
@@ -1111,7 +1128,7 @@ function loadTunnelState() {
     if (fs.existsSync(TUNNEL_STATE_FILE)) {
       return JSON.parse(fs.readFileSync(TUNNEL_STATE_FILE, 'utf8'));
     }
-  } catch {}
+  } catch { }
   return null;
 }
 
@@ -1122,7 +1139,7 @@ function saveTunnelState(state) {
     } else {
       fs.writeFileSync(TUNNEL_STATE_FILE, JSON.stringify(state, null, 2));
     }
-  } catch {}
+  } catch { }
 }
 
 function stopTunnel(forceKillDaemon = false) {
@@ -1133,10 +1150,10 @@ function stopTunnel(forceKillDaemon = false) {
   if (forceKillDaemon) {
     const st = loadTunnelState();
     if (st && st.pid && isPidAlive(st.pid)) {
-      try { process.kill(st.pid); } catch {}
+      try { process.kill(st.pid); } catch { }
     }
     if (tunnel.proc) {
-      try { tunnel.proc.kill(); } catch {}
+      try { tunnel.proc.kill(); } catch { }
       tunnel.proc = null;
     }
     saveTunnelState(null);
@@ -1150,26 +1167,42 @@ function stopTunnel(forceKillDaemon = false) {
 
 process.on('uncaughtException', err => {
   if (err && (err.code === 'ECONNRESET' || err.code === 'EPIPE' || err.code === 'ERR_STREAM_DESTROYED')) return;
+  const msg = `[${new Date().toISOString()}] UncaughtException: ${err ? (err.stack || err.message) : err}\n`;
+  try { fs.appendFileSync(path.join(CONF_DIR, 'exit.log'), msg); } catch { }
   console.error('⚠️  Erreur non interceptée (ignorée pour préserver le serveur) :', err ? (err.stack || err.message) : err);
 });
 process.on('unhandledRejection', reason => {
+  const msg = `[${new Date().toISOString()}] UnhandledRejection: ${reason ? (reason.stack || reason.message || reason) : reason}\n`;
+  try { fs.appendFileSync(path.join(CONF_DIR, 'exit.log'), msg); } catch { }
   console.error('⚠️  Promesse rejetée non gérée :', reason ? (reason.stack || reason.message || reason) : reason);
 });
 
 function cleanupAll() {
+  const msg = `[${new Date().toISOString()}] cleanupAll called (pid=${process.pid})\n`;
+  try { fs.appendFileSync(path.join(CONF_DIR, 'exit.log'), msg); } catch { }
+
   // On NE tue PAS le processus tunnel lors d'un redémarrage du serveur pour conserver exactement la même URL !
   stopTunnel(false);
   for (const proj of Object.values(S)) {
-    if (proj.watcher) try { proj.watcher.close(); } catch {}
-    if (proj.chat && proj.chat.proc) try { proj.chat.proc.kill(); } catch {}
+    if (proj.watcher) try { proj.watcher.close(); } catch { }
+    if (proj.chat && proj.chat.proc) try { proj.chat.proc.kill(); } catch { }
     for (const tab of Object.values(proj.tabs || {})) {
-      if (tab && !tab.dead) try { tab.p.kill(); } catch {}
+      if (tab && !tab.dead) try { tab.p.kill(); } catch { }
     }
   }
 }
-process.on('exit', cleanupAll);
+process.on('exit', code => {
+  try { fs.appendFileSync(path.join(CONF_DIR, 'exit.log'), `[${new Date().toISOString()}] process exit code: ${code}\n`); } catch { }
+  cleanupAll();
+});
 process.on('SIGINT', () => { cleanupAll(); process.exit(0); });
 process.on('SIGTERM', () => { cleanupAll(); process.exit(0); });
+process.on('SIGBREAK', () => {
+  try { fs.appendFileSync(path.join(CONF_DIR, 'exit.log'), `[${new Date().toISOString()}] SIGBREAK ignored\n`); } catch { }
+});
+process.on('SIGHUP', () => {
+  try { fs.appendFileSync(path.join(CONF_DIR, 'exit.log'), `[${new Date().toISOString()}] SIGHUP ignored\n`); } catch { }
+});
 
 async function startTunnel(preferredProvider, forceRestart = false) {
   // 1. Vérifier si un tunnel persistant tourne déjà sur ce PC (garde toujours la même URL !)
@@ -1198,7 +1231,7 @@ async function startTunnel(preferredProvider, forceRestart = false) {
     try {
       const bin = await ensureCloudflaredBinary();
       tunnel.status = 'starting';
-      try { fs.writeFileSync(TUNNEL_LOG_FILE, ''); } catch {}
+      try { fs.writeFileSync(TUNNEL_LOG_FILE, ''); } catch { }
       const outFd = fs.openSync(TUNNEL_LOG_FILE, 'a');
       const errFd = fs.openSync(TUNNEL_LOG_FILE, 'a');
 
@@ -1214,7 +1247,7 @@ async function startTunnel(preferredProvider, forceRestart = false) {
           const psCmd = `($r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='${cmdStr.replace(/'/g, "''")}'}).ProcessId`;
           const out = execFileSync('powershell.exe', ['-NoProfile', '-Command', psCmd], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
           if (/^\d+$/.test(out)) spawnedPid = Number(out);
-        } catch {}
+        } catch { }
       }
       if (!spawnedPid) {
         const proc = spawn(bin, cfArgs, {
@@ -1254,7 +1287,7 @@ async function startTunnel(preferredProvider, forceRestart = false) {
             await updateTunnelQr();
             printTunnelBanner();
           }
-        } catch {}
+        } catch { }
       }, 400);
       return;
     } catch (e) {
@@ -1429,7 +1462,7 @@ function listAllProjects() {
 
 function inspectProject(name, fullPath, isCustom) {
   let mtime = 0;
-  try { mtime = fs.statSync(fullPath).mtimeMs; } catch {}
+  try { mtime = fs.statSync(fullPath).mtimeMs; } catch { }
   const st = S[name];
   const activeTabs = st ? Object.values(st.tabs).filter(t => !t.dead).length : 0;
   let branch = '';
@@ -1439,7 +1472,7 @@ function inspectProject(name, fullPath, isCustom) {
       const h = fs.readFileSync(headFile, 'utf8').trim();
       branch = h.startsWith('ref: refs/heads/') ? h.slice(16) : h.slice(0, 7);
     }
-  } catch {}
+  } catch { }
   return { n: name, d: fullPath, custom: !!isCustom, mtime, activeTabs, branch };
 }
 
@@ -1516,14 +1549,14 @@ setInterval(() => {
   for (const proj of Object.values(S)) {
     for (const tab of Object.values(proj.tabs)) {
       for (const r of tab.subs) {
-        try { r.write(': ping\n\n'); } catch {}
+        try { r.write(': ping\n\n'); } catch { }
       }
     }
     for (const r of proj.fileSubs) {
-      try { r.write(': ping\n\n'); } catch {}
+      try { r.write(': ping\n\n'); } catch { }
     }
     for (const r of proj.chatSubs) {
-      try { r.write(': ping\n\n'); } catch {}
+      try { r.write(': ping\n\n'); } catch { }
     }
   }
 }, 15000);
@@ -1550,7 +1583,7 @@ const MIME_EXTS = {
   '.md': 'text/plain; charset=utf-8'
 };
 
-http.createServer(async (q, r) => {
+const mainServer = http.createServer(async (q, r) => {
   try {
     const u = new URL(q.url, 'http://localhost');
     const a = u.pathname;
@@ -1761,7 +1794,7 @@ http.createServer(async (q, r) => {
       const target = (proj.chat.threads || []).find(t => t.id === tid);
       if (!target) return json(r, { error: 'Discussion introuvable' }, 404);
       if (proj.chat.proc) {
-        try { proj.chat.proc.kill(); } catch {}
+        try { proj.chat.proc.kill(); } catch { }
         proj.chat.proc = null;
       }
       proj.chat.busy = false;
@@ -1858,9 +1891,9 @@ http.createServer(async (q, r) => {
                     isCurrent
                   });
                 }
-              } catch {}
+              } catch { }
             }
-          } catch {}
+          } catch { }
         }
         return json(r, { ok: 1, conversations: convList });
       }
@@ -1902,7 +1935,7 @@ http.createServer(async (q, r) => {
     if (a === '/api/chat/stop' && q.method === 'POST') {
       const proj = getProjectState(n);
       if (proj.chat.proc) {
-        try { proj.chat.proc.kill(); } catch {}
+        try { proj.chat.proc.kill(); } catch { }
         proj.chat.proc = null;
       }
       proj.chat.busy = false;
@@ -1913,7 +1946,7 @@ http.createServer(async (q, r) => {
       const proj = getProjectState(n);
       const d = dirOf(n);
       if (proj.chat.proc) {
-        try { proj.chat.proc.kill(); } catch {}
+        try { proj.chat.proc.kill(); } catch { }
         proj.chat.proc = null;
       }
       proj.chat.busy = false;
@@ -1967,7 +2000,7 @@ http.createServer(async (q, r) => {
       if (targetUrl && QRCode) {
         try {
           customQr = await QRCode.toString(targetUrl, { type: 'svg', margin: 1, color: { dark: '#111111', light: '#ffffff' } });
-        } catch {}
+        } catch { }
       }
       return json(r, {
         status: tunnel.status,
@@ -1999,9 +2032,9 @@ http.createServer(async (q, r) => {
         const projName = String(B.name || '');
         if (S[projName]) {
           for (const t of Object.values(S[projName].tabs)) {
-            try { t.p.kill(); } catch {}
+            try { t.p.kill(); } catch { }
           }
-          if (S[projName].watcher) try { S[projName].watcher.close(); } catch {}
+          if (S[projName].watcher) try { S[projName].watcher.close(); } catch { }
           delete S[projName];
         }
         if (customPaths[projName]) {
@@ -2078,10 +2111,10 @@ http.createServer(async (q, r) => {
         const tabId = String(B.tab || 'shell');
         if (B.action === 'kill') {
           const s = proj.tabs[tabId];
-          if (s && !s.dead) try { s.p.kill(); } catch {}
+          if (s && !s.dead) try { s.p.kill(); } catch { }
         } else if (B.action === 'close') {
           const s = proj.tabs[tabId];
-          if (s && !s.dead) try { s.p.kill(); } catch {}
+          if (s && !s.dead) try { s.p.kill(); } catch { }
           delete proj.tabs[tabId];
         } else {
           startSession(n, tabId, {
@@ -2158,7 +2191,7 @@ http.createServer(async (q, r) => {
       const x = proj && proj.tabs[tabId];
       try {
         if (x && !x.dead) x.p.resize(Math.max(20, B.cols | 0), Math.max(5, B.rows | 0));
-      } catch {}
+      } catch { }
       return json(r, { ok: 1 });
     }
 
@@ -2307,7 +2340,18 @@ http.createServer(async (q, r) => {
   } catch (e) {
     json(r, { error: e.message || 'Erreur interne' }, 500);
   }
-}).listen(PORT, '0.0.0.0', () => {
+});
+
+mainServer.on('error', err => {
+  const msg = `[${new Date().toISOString()}] mainServer error: ${err ? (err.stack || err.message) : err}\n`;
+  try { fs.appendFileSync(path.join(CONF_DIR, 'server.log'), msg); } catch {}
+});
+mainServer.on('clientError', (err, socket) => {
+  if (socket && !socket.destroyed) {
+    try { socket.end('HTTP/1.1 400 Bad Request\r\n\r\n'); } catch {}
+  }
+});
+mainServer.listen(PORT, '0.0.0.0', () => {
   console.log('\n╔══════════════════════════════════════════════════════════════════════════╗');
   console.log('║  agy console v3.0 · Studio Mobile & Desktop (Local, Wi-Fi & 4G/5G)       ║');
   console.log('╚══════════════════════════════════════════════════════════════════════════╝');

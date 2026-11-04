@@ -83,3 +83,37 @@ Ce document récapitule l'ensemble des fonctionnalités, correctifs et optimisat
 - **Onglet Aperçu intégré** :
   - Sélecteur de page HTML, bouton de rechargement en 1 tap et option d'ouverture plein écran dans un nouvel onglet.
 
+---
+
+## 7. Web Push Serveur (APNs Apple) & Notifications Écran Verrouillé
+
+- **Protocole Web Push natif (VAPID)** :
+  - Clés VAPID persistantes générées et sauvegardées dans `~/.agy-console/vapid-keys.json`.
+  - Intégration conforme aux exigences strictes d'Apple APNs (`web.push.apple.com`).
+  - Déclenchement automatique par le serveur PC lors de la fin de tâche ou d'erreur.
+  - Aperçu textuel réel de la réponse directement affiché dans la notification sur l'écran verrouillé.
+
+---
+
+## 8. Gestionnaire de Fichiers Avancé & Export ZIP en 1 Clic (Pack 2)
+
+- **Export ZIP complet (`/api/zip`)** :
+  - Génération d'archives zip compressées à la volée via `tar.exe` (libarchive/zlib) en excluant automatiquement `.git` et `node_modules`.
+  - Bouton direct dans l'en-tête des fichiers du projet.
+- **Opérations arborescence complètes** :
+  - Création de sous-dossiers (`/api/folder/create`).
+  - Renommage instantané de fichiers et dossiers (`/api/file/rename`).
+  - Suppression sécurisée avec confirmation (`/api/file/delete`).
+- **Éradication des emojis** :
+  - Remplacement de l'ensemble des emojis par des icônes vectorielles SVG fines et harmonisées.
+
+---
+
+## 9. Résolution du Bug de Streaming (`agent_response`) & Watchdog Anti-Gel
+
+- **Prise en charge du nouveau format de flux `agent_response`** :
+  - Correction de `server.js` pour capturer tous les deltas de texte `su.text_delta` et forcer l'injection de `res.response`, éliminant le bug du message vide ou bloqué sur « Tâche terminée avec succès ».
+- **Keep-Alive SSE & Watchdog parallèle** :
+  - Envoi automatique de pings toutes les 12 secondes sur le flux SSE pour interdire la déconnexion par timeout 4G / Cloudflare.
+  - Polling de secours actif dès le lancement d'une tâche pour rafraîchir l'interface même si la connexion réseau est instable.
+
