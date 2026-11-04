@@ -2,14 +2,14 @@ name: AgyIsland
 options:
   bundleIdPrefix: com.agy
   deploymentTarget:
-    iOS: 16.1
+    iOS: 16.2
   xcodeVersion: '15.4'
   objectVersion: 60
   generateEmptyDirectories: true
 
 settings:
   base:
-    IPHONEOS_DEPLOYMENT_TARGET: "16.1"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.2"
     SWIFT_VERSION: "5.9"
     CODE_SIGNING_ALLOWED: "NO"
     CODE_SIGNING_REQUIRED: "NO"
