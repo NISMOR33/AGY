@@ -25,6 +25,63 @@ const CONV_DIR = path.join(CONF_DIR, 'conversations');
 const CONF_FILE = path.join(CONF_DIR, 'config.json');
 const TUNNEL_STATE_FILE = path.join(CONF_DIR, 'tunnel-state.json');
 const TUNNEL_LOG_FILE = path.join(CONF_DIR, 'tunnel.log');
+const VAPID_FILE = path.join(CONF_DIR, 'vapid-keys.json');
+const SUBS_FILE = path.join(CONF_DIR, 'push-subscriptions.json');
+
+let webpush;
+try { webpush = require('web-push'); } catch {}
+
+let vapidKeys = null;
+if (webpush) {
+  try {
+    vapidKeys = JSON.parse(fs.readFileSync(VAPID_FILE, 'utf8'));
+  } catch {
+    try {
+      vapidKeys = webpush.generateVAPIDKeys();
+      fs.writeFileSync(VAPID_FILE, JSON.stringify(vapidKeys, null, 2));
+    } catch {}
+  }
+  if (vapidKeys && vapidKeys.publicKey && vapidKeys.privateKey) {
+    try {
+      webpush.setVapidDetails('mailto:support@agy-console.local', vapidKeys.publicKey, vapidKeys.privateKey);
+    } catch {}
+  }
+}
+
+function loadPushSubs() {
+  try { return JSON.parse(fs.readFileSync(SUBS_FILE, 'utf8')); } catch { return []; }
+}
+
+function savePushSubs(subs) {
+  try { fs.writeFileSync(SUBS_FILE, JSON.stringify(subs, null, 2)); } catch {}
+}
+
+function addPushSub(sub) {
+  if (!sub || !sub.endpoint) return;
+  const subs = loadPushSubs().filter(s => s.endpoint !== sub.endpoint);
+  subs.push(sub);
+  savePushSubs(subs);
+}
+
+function removePushSub(endpoint) {
+  const subs = loadPushSubs().filter(s => s.endpoint !== endpoint);
+  savePushSubs(subs);
+}
+
+async function broadcastPushNotification(payload) {
+  if (!webpush || !vapidKeys) return;
+  const subs = loadPushSubs();
+  if (!subs.length) return;
+  const bodyStr = JSON.stringify(payload);
+  const tasks = subs.map(sub => {
+    return webpush.sendNotification(sub, bodyStr).catch(err => {
+      if (err.statusCode === 404 || err.statusCode === 410) {
+        removePushSub(sub.endpoint);
+      }
+    });
+  });
+  await Promise.allSettled(tasks);
+}
 
 fs.mkdirSync(BIN_DIR, { recursive: true });
 fs.mkdirSync(CONV_DIR, { recursive: true });
@@ -799,6 +856,13 @@ function runChatPrompt(n, promptText, opts = {}) {
         }
         assistantMsg.error = errText.slice(0, 500);
       }
+      if (!assistantMsg.text) {
+        if (assistantMsg.tools && assistantMsg.tools.length) {
+          assistantMsg.text = "Modifications et actions terminées sur le projet.";
+        } else if (!assistantMsg.error) {
+          assistantMsg.text = (code === 0) ? "Tâche terminée avec succès." : "L'exécution s'est terminée sans réponse textuelle.";
+        }
+      }
     }
     saveChatState(n, d, chat);
     broadcastChat(proj, {
@@ -809,6 +873,14 @@ function runChatPrompt(n, promptText, opts = {}) {
       threads: getThreadsSummary(chat),
       tokenStats: getProjectTokenStats(proj)
     });
+
+    const durStr = assistantMsg.duration ? `${assistantMsg.duration.toFixed(1)}s` : '';
+    const hasErr = !!assistantMsg.error;
+    broadcastPushNotification({
+      title: (hasErr ? 'Erreur agy · ' : 'agy · ') + n,
+      body: hasErr ? assistantMsg.error : (durStr ? `Tâche terminée en ${durStr}` : 'Tâche terminée avec succès !'),
+      url: `/?p=${encodeURIComponent(n)}`
+    }).catch(() => {});
   });
 
   return assistantMsg;
@@ -1075,6 +1147,14 @@ function stopTunnel(forceKillDaemon = false) {
     tunnel.qrTerm = null;
   }
 }
+
+process.on('uncaughtException', err => {
+  if (err && (err.code === 'ECONNRESET' || err.code === 'EPIPE' || err.code === 'ERR_STREAM_DESTROYED')) return;
+  console.error('⚠️  Erreur non interceptée (ignorée pour préserver le serveur) :', err ? (err.stack || err.message) : err);
+});
+process.on('unhandledRejection', reason => {
+  console.error('⚠️  Promesse rejetée non gérée :', reason ? (reason.stack || reason.message || reason) : reason);
+});
 
 function cleanupAll() {
   // On NE tue PAS le processus tunnel lors d'un redémarrage du serveur pour conserver exactement la même URL !
@@ -1528,6 +1608,19 @@ http.createServer(async (q, r) => {
       });
     }
 
+    if (a === '/sw.js') {
+      const swPath = path.join(__dirname, 'public', 'sw.js');
+      if (fs.existsSync(swPath)) {
+        r.writeHead(200, {
+          'content-type': 'application/javascript; charset=utf-8',
+          'service-worker-allowed': '/',
+          'cache-control': 'no-cache, no-store, must-revalidate'
+        });
+        return r.end(fs.readFileSync(swPath));
+      }
+      return json(r, { error: 'Service worker non trouvé' }, 404);
+    }
+
     if (a === '/api/ping') {
       return json(r, {
         ok: 1,
@@ -1594,6 +1687,27 @@ http.createServer(async (q, r) => {
           qrSvg: tunnel.qrSvg
         }
       });
+    }
+
+    // Routes Web Push Notifications (Écran de veille / APNs Apple)
+    if (a === '/api/push/vapid-public-key') {
+      return json(r, { publicKey: vapidKeys ? vapidKeys.publicKey : null });
+    }
+
+    if (a === '/api/push/subscribe' && q.method === 'POST') {
+      if (B.subscription) {
+        addPushSub(B.subscription);
+      }
+      return json(r, { ok: 1 });
+    }
+
+    if (a === '/api/push/test' && q.method === 'POST') {
+      await broadcastPushNotification({
+        title: 'agy console · Test Push',
+        body: 'Notification push reçue avec succès sur ton écran de veille !',
+        url: '/'
+      });
+      return json(r, { ok: 1 });
     }
 
     // 2. Chat IA Temps Réel (Histoire, Discussions multiples sauvegardées, Envoi de message, Stop, Flux SSE)

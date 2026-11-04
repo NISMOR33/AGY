@@ -388,6 +388,91 @@
       color: var(--or);
     }
 
+    .mini-btn.danger {
+      background: var(--rd-bg);
+      color: var(--rd);
+      border: 1px solid var(--rd);
+    }
+
+    .mini-btn.danger:hover {
+      background: var(--rd);
+      color: #fff;
+    }
+
+    .stop-inline-btn {
+      margin-left: auto;
+      padding: 4px 11px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--rd-bg);
+      color: var(--rd);
+      border: 1px solid rgba(220, 38, 38, 0.28);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 2px 6px rgba(220, 38, 38, 0.08);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .stop-inline-btn:hover {
+      background: var(--rd);
+      color: #ffffff;
+      border-color: var(--rd);
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .stop-inline-btn:active {
+      transform: scale(0.96);
+    }
+
+    .toast-box {
+      position: fixed;
+      bottom: 84px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--card);
+      color: var(--tx);
+      border: 1px solid var(--ln2);
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 12.5px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 9999;
+      white-space: nowrap;
+    }
+
+    .toast-box .toast-ic {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .toast-box .toast-ic svg {
+      width: 15px;
+      height: 15px;
+    }
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 9999;
+    }
+
+    .toast-box.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
     .pj-list {
       padding: 4px 8px;
       display: flex;
@@ -1798,8 +1883,14 @@
     </h2>
 
     <div style="display:flex;gap:8px;margin:10px 0 6px;flex-wrap:wrap">
-      <button class="btn" id="btn-cfg-open-tokens" type="button" style="flex:1;justify-content:center">📊 Tokens par Modèle & Reset</button>
-      <button class="btn" id="btn-cfg-open-net" type="button" style="flex:1;justify-content:center">📱 QR Code & Liens d’accès</button>
+      <button class="btn" id="btn-cfg-open-tokens" type="button" style="flex:1;justify-content:center;gap:6px">
+        <svg class="ic sm" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span>Tokens & Quotas</span>
+      </button>
+      <button class="btn" id="btn-cfg-open-net" type="button" style="flex:1;justify-content:center;gap:6px">
+        <svg class="ic sm" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>QR Code & Accès</span>
+      </button>
     </div>
 
     <label for="cfg-model">Modèle d’intelligence artificielle</label>
@@ -1831,19 +1922,28 @@
   <!-- DIALOGUE TOKENS PAR MODÈLE & RÉINITIALISATION -->
   <dialog id="dlg-tokens" style="max-width:540px;width:94vw">
     <h2>
-      <span>📊 Tokens par Modèle & Réinitialisations</span>
+      <span style="display:inline-flex;align-items:center;gap:7px">
+        <svg class="ic sm" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span>Tokens par Modèle & Reset</span>
+      </span>
       <button class="icon-btn sq" id="tokens-cx"><svg class="ic sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </h2>
 
     <!-- Fenêtres de réinitialisation -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0">
       <div style="padding:10px;border:1px solid var(--ln);border-radius:10px;background:var(--bg)">
-        <div class="dm" style="font-size:10.5px;font-weight:700">⏱️ FENÊTRE QUOTA (5H)</div>
+        <div class="dm" style="font-size:10.5px;font-weight:700;display:flex;align-items:center;gap:5px">
+          <svg class="ic xs" viewBox="0 0 24 24" style="width:13px;height:13px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>FENÊTRE QUOTA (5H)</span>
+        </div>
         <div class="mono" id="tok-reset-5h" style="font-size:13.5px;font-weight:700;color:var(--or);margin-top:3px">100% dispo</div>
         <div class="dm mono" id="tok-reset-5h-sub" style="font-size:10.5px;margin-top:2px">Aucun quota bloqué</div>
       </div>
       <div style="padding:10px;border:1px solid var(--ln);border-radius:10px;background:var(--bg)">
-        <div class="dm" style="font-size:10.5px;font-weight:700">🔄 RESET QUOTIDIEN (00:00)</div>
+        <div class="dm" style="font-size:10.5px;font-weight:700;display:flex;align-items:center;gap:5px">
+          <svg class="ic xs" viewBox="0 0 24 24" style="width:13px;height:13px"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          <span>RESET QUOTIDIEN (00:00)</span>
+        </div>
         <div class="mono" id="tok-reset-day" style="font-size:13.5px;font-weight:700;color:var(--gr);margin-top:3px">—</div>
         <div class="dm mono" id="tok-reset-day-sub" style="font-size:10.5px;margin-top:2px">Réinitialisation à minuit</div>
       </div>
@@ -1885,7 +1985,10 @@
   <!-- DIALOGUE HISTORIQUE & REPRISE DE CONVERSATIONS -->
   <dialog id="dlg-convs">
     <h2>
-      <span>📚 Conversations Passées agy</span>
+      <span style="display:inline-flex;align-items:center;gap:7px">
+        <svg class="ic sm" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span>Conversations Passées agy</span>
+      </span>
       <button class="icon-btn sq" id="convs-cx"><svg class="ic sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </h2>
     <p class="dm" style="font-size:12px;margin-bottom:10px">Reprends une conversation passée sur le PC pour continuer exactement là où agy s'est arrêté.</p>
@@ -1926,7 +2029,13 @@
       err: `<svg class="ic sm" style="color:var(--rd)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
       copy: `<svg class="ic sm" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
       send: `<svg class="ic sm" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`,
-      stop: `<svg class="ic sm" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>`
+      stop: `<svg class="ic sm" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>`,
+      stopPill: `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2.5"/></svg>`,
+      bell: `<svg class="ic sm" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
+      bellOff: `<svg class="ic sm" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`,
+      clock: `<svg class="ic sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+      refresh: `<svg class="ic sm" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`,
+      trash: `<svg class="ic sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`
     };
 
     const MAS = (s, c = '') => `<svg class="mas ${c}" width="${s}" height="${s * .875}" viewBox="0 0 16 14" shape-rendering="crispEdges" aria-hidden="true"><g class="bd"><rect x="3" y="0" width="2" height="2"/><rect x="11" y="0" width="2" height="2"/><rect x="2" y="2" width="12" height="8"/><rect x="0" y="5" width="2" height="3"/><rect x="14" y="5" width="2" height="3"/><rect x="4" y="10" width="2" height="3"/><rect x="10" y="10" width="2" height="3"/><g class="ey"><rect x="5" y="4" width="2" height="3"/><rect x="9" y="4" width="2" height="3"/></g></g></svg>`;
@@ -2024,19 +2133,239 @@
       if (sendLbl) sendLbl.textContent = (chatBusy && centerMode === 'chat') ? 'Stop' : 'Envoyer';
     }
 
-    function notifyDone() {
+    let swReg = null;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        swReg = reg;
+      }).catch(() => {});
+    }
+
+    // Gestion de l'AudioContext pour Mobile (iOS/Android)
+    let audioCtx = null;
+    function getAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+    ['touchstart', 'touchend', 'click', 'keydown'].forEach(ev => {
+      document.addEventListener(ev, () => {
+        try { getAudioContext(); } catch {}
+      }, { once: false, passive: true });
+    });
+
+    let toastTimer = null;
+    function showToast(text, iconSvg = '', duration = 2600) {
+      let el = $('#app-toast');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'app-toast';
+        el.className = 'toast-box';
+        document.body.appendChild(el);
+      }
+      el.innerHTML = `${iconSvg ? `<span class="toast-ic">${iconSvg}</span>` : ''}<span>${E(text)}</span>`;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        el.classList.remove('show');
+      }, duration);
+    }
+
+    function playSound(type = 'done') {
       if (!soundEnabled) return;
       try {
-        if (navigator.vibrate) navigator.vibrate([70, 40, 70]);
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator(), g = ctx.createGain();
-        osc.frequency.setValueAtTime(660, ctx.currentTime);
-        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08);
-        g.gain.setValueAtTime(0.08, ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.24);
-        osc.connect(g); g.connect(ctx.destination);
-        osc.start(); osc.stop(ctx.currentTime + 0.24);
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        if (ctx.state === 'suspended') ctx.resume();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        if (type === 'sent') {
+          // Bip montant vif et discret (prompt envoyé)
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(500, now);
+          osc.frequency.exponentialRampToValueAtTime(760, now + 0.07);
+          gain.gain.setValueAtTime(0.09, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } else if (type === 'error') {
+          // Tonalité feutrée descendante (alerte ou stop)
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(400, now);
+          osc.frequency.exponentialRampToValueAtTime(240, now + 0.18);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+          osc.start(now);
+          osc.stop(now + 0.2);
+        } else {
+          // Arpège harmonique subtil (C5 523Hz -> E5 659Hz -> G5 784Hz)
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.setValueAtTime(659.25, now + 0.08);
+          osc.frequency.setValueAtTime(783.99, now + 0.16);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+          osc.start(now);
+          osc.stop(now + 0.32);
+        }
       } catch {}
+    }
+
+    function playHaptic(type = 'done') {
+      if (!soundEnabled) return;
+      try {
+        if ('vibrate' in navigator) {
+          if (type === 'sent') navigator.vibrate(30);
+          else if (type === 'error') navigator.vibrate([80, 40, 80]);
+          else navigator.vibrate([50, 40, 80]);
+        }
+      } catch {}
+    }
+
+    function triggerSystemNotification(title, body) {
+      if (!soundEnabled) return;
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      try {
+        const options = {
+          body: body || 'Tâche terminée.',
+          icon: '/manifest.json',
+          badge: '/manifest.json',
+          tag: 'agy-task',
+          renotify: true,
+          silent: true
+        };
+        if (swReg && swReg.showNotification) {
+          swReg.showNotification(title, options).catch(() => {
+            try { new Notification(title, options); } catch {}
+          });
+        } else {
+          new Notification(title, options);
+        }
+      } catch {}
+    }
+
+    function notifyDone(status = 'done', info = '') {
+      playSound(status === 'error' ? 'error' : 'done');
+      playHaptic(status === 'error' ? 'error' : 'done');
+
+      const projectName = (cur && cur.n) ? cur.n : 'Projet';
+      if (status === 'error') {
+        triggerSystemNotification(`agy · ${projectName}`, info || 'Exécution arrêtée ou erreur.');
+      } else {
+        triggerSystemNotification(`agy · ${projectName}`, info ? `Terminé en ${info}` : 'Tâche terminée avec succès.');
+      }
+    }
+
+    function updateBellUi() {
+      const btn = $('#btn-bell');
+      if (!btn) return;
+      if (soundEnabled) {
+        btn.classList.remove('ghost');
+        btn.style.color = 'var(--or)';
+        btn.style.borderColor = 'var(--or)';
+        btn.title = 'Notifications & sons activés (cliquer pour couper)';
+        btn.innerHTML = `<svg class="ic sm" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" fill="currentColor"/><path d="M13.73 21a2 2 0 0 1-3.46 0" fill="currentColor"/></svg>`;
+      } else {
+        btn.classList.add('ghost');
+        btn.style.color = 'var(--dm)';
+        btn.style.borderColor = '';
+        btn.title = 'Notifications & sons coupés (cliquer pour activer)';
+        btn.innerHTML = `<svg class="ic sm" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2"/></svg>`;
+      }
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    }
+
+    async function subscribeToPush() {
+      if (!swReg || !('pushManager' in swReg)) return false;
+      try {
+        const res = await api('push/vapid-public-key');
+        if (!res || !res.publicKey) return false;
+        let sub = await swReg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await swReg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(res.publicKey)
+          });
+        }
+        await api('push/subscribe', { subscription: sub });
+        return true;
+      } catch (err) {
+        console.warn('Erreur subscription push:', err);
+        return false;
+      }
+    }
+
+    async function toggleBell() {
+      soundEnabled = !soundEnabled;
+      localStorage.setItem('agy_bell', soundEnabled ? '1' : '0');
+      updateBellUi();
+
+      if (soundEnabled) {
+        let granted = false;
+        if ('Notification' in window) {
+          if (Notification.permission === 'granted') {
+            granted = true;
+          } else {
+            try {
+              let res = null;
+              if (Notification.requestPermission.length) {
+                res = await new Promise(r => Notification.requestPermission(r));
+              } else {
+                res = await Notification.requestPermission();
+              }
+              granted = (res === 'granted');
+            } catch {}
+          }
+        }
+
+        let pushRegistered = false;
+        if (granted) {
+          pushRegistered = await subscribeToPush();
+        }
+
+        if (pushRegistered) {
+          showToast('Notifications écran verrouillé (Push APNs) actives', SVG.bell);
+        } else if (granted) {
+          showToast('Notifications & sons activés', SVG.bell);
+        } else {
+          showToast('Sons & vibrations tactiles activés', SVG.bell);
+        }
+        playSound('done');
+        playHaptic('done');
+      } else {
+        showToast('Mode silencieux activé', SVG.bellOff);
+      }
+    }
+
+    async function stopChat() {
+      if (!chatBusy) return;
+      try {
+        if (REAL && cur && cur.n) {
+          await api('chat/stop', { p: cur.n }).catch(() => {});
+        }
+      } catch {}
+      setBusyUi(false);
+      playSound('error');
+      playHaptic('error');
+      showToast('Exécution interrompue', SVG.stopPill);
+      if (cur && cur.n) await syncChatHistory(cur.n);
     }
 
     /* Navigation Mobile & Switch Chat / Console / Aperçu Live */
@@ -2128,7 +2457,7 @@
             ${SVG.chat}
             <b>${E(th.title || 'Nouvelle discussion')}</b>
             <span class="pj-badge">${th.msgCount || 0} msg</span>
-            ${projectThreads.length > 1 ? `<button class="mini-btn ghost" data-del-th="${E(th.id)}" title="Supprimer cette discussion" style="padding:1px 5px;font-size:10px">✕</button>` : ''}
+            ${projectThreads.length > 1 ? `<button class="mini-btn ghost" data-del-th="${E(th.id)}" title="Supprimer cette discussion" style="padding:2px 5px;display:inline-flex;align-items:center">${SVG.trash}</button>` : ''}
           </div>
           <small class="mono">Sauvegardé sur PC · ${E(dtStr)}</small>
         </div>`;
@@ -2286,7 +2615,7 @@
           </div>`;
         }).join('');
 
-        const isStreaming = m.status === 'streaming';
+        const isStreaming = chatBusy && (m.status === 'streaming');
         const metaInfo = m.duration ? `${m.duration.toFixed(1)}s` : (isStreaming ? 'En cours…' : '');
         const tokVal = (m.usage && m.usage.total) || m.tokens || 0;
         const tokBadge = tokVal ? `<span class="meta-tok mono" data-open-tokens="1" title="Voir le détail des tokens">${fmtTok(tokVal)} tok</span>` : '';
@@ -2301,7 +2630,7 @@
           ${toolsHtml ? `<div class="tool-list">${toolsHtml}</div>` : ''}
           ${m.text ? `<div class="md-body">${renderMarkdown(m.text)}</div>` : ''}
           ${m.error ? `<div style="color:var(--rd);font-size:12.5px;margin-top:4px">${E(m.error)}</div>` : ''}
-          ${isStreaming && !m.text ? `<div class="thinking-bar">${SVG.spin} <span>agy réfléchit et agit sur le projet…</span></div>` : ''}
+          ${isStreaming ? `<div class="thinking-bar">${SVG.spin} <span>agy réfléchit et agit sur le projet…</span><button class="stop-inline-btn" onclick="stopChat()" title="Interrompre immédiatement">${SVG.stopPill} <span>Arrêter</span></button></div>` : ''}
         </div>`;
       }).join('');
 
@@ -2321,20 +2650,25 @@
         if (h.threads) projectThreads = h.threads;
         if (h.activeThreadId) activeThreadId = h.activeThreadId;
         if (h.tokenStats) updateTokenUi(h.tokenStats);
+        const wasBusy = chatBusy;
         setBusyUi(!!h.busy);
         renderChat();
-        if (!h.busy && chatPollTimer) {
+        if (wasBusy && !h.busy) {
           clearInterval(chatPollTimer);
           chatPollTimer = null;
           refreshFiles();
           loadGitInfo();
+          const lastAss = (chatMessages || []).slice().reverse().find(x => x.role === 'assistant');
+          const durStr = lastAss && lastAss.duration ? `${lastAss.duration.toFixed(1)}s` : '';
+          const hasErr = lastAss && lastAss.error;
+          notifyDone(hasErr ? 'error' : 'done', hasErr ? lastAss.error : durStr);
         }
       } catch {}
     }
 
     function startChatPolling(pName) {
       clearInterval(chatPollTimer);
-      chatPollTimer = setInterval(() => syncChatHistory(pName), 1200);
+      chatPollTimer = setInterval(() => syncChatHistory(pName), 1500);
     }
 
     function attachChatStream(p) {
@@ -2345,8 +2679,13 @@
       syncChatHistory(p.n);
 
       chatES = new EventSource(`/api/chat/stream?p=${encodeURIComponent(p.n)}&k=${encodeURIComponent(K)}`);
+      chatES.onerror = () => {
+        if (p && p.n) startChatPolling(p.n);
+      };
       chatES.onmessage = e => {
-        const ev = JSON.parse(e.data);
+        if (!e.data || e.data === 'ping') return;
+        let ev;
+        try { ev = JSON.parse(e.data); } catch { return; }
         if (ev.type === 'init' || ev.type === 'thread_changed') {
           chatMessages = ev.messages || [];
           if (ev.threads) projectThreads = ev.threads;
@@ -2363,6 +2702,7 @@
           if (ev.activeThreadId) activeThreadId = ev.activeThreadId;
           if (ev.tokenStats) updateTokenUi(ev.tokenStats);
           setBusyUi(true);
+          startChatPolling(p.n);
           renderChat();
         } else if (ev.type === 'delta') {
           const m = chatMessages.find(x => x.id === ev.msgId);
@@ -2393,7 +2733,9 @@
           renderChat();
           refreshFiles();
           loadGitInfo();
-          notifyDone();
+          const durStr = ev.assistantMsg && ev.assistantMsg.duration ? `${ev.assistantMsg.duration.toFixed(1)}s` : '';
+          const hasErr = ev.assistantMsg && ev.assistantMsg.error;
+          notifyDone(hasErr ? 'error' : 'done', hasErr ? ev.assistantMsg.error : durStr);
         } else if (ev.type === 'cleared') {
           chatMessages = [];
           updateTokenUi({ totalTokens: 0, inputTokens: 0, outputTokens: 0, thinkingTokens: 0, cacheReadTokens: 0 });
@@ -2465,15 +2807,16 @@
     async function handleSend(rawText) {
       const t = String(rawText || '').trim();
       if (centerMode === 'chat' && chatBusy) {
-        clearInterval(chatPollTimer);
-        if (REAL) await api('chat/stop', { p: cur.n }).catch(() => {});
-        setBusyUi(false);
-        await syncChatHistory(cur.n);
+        await stopChat();
         return;
       }
       if (!t) return;
       $('#in').value = '';
       $('#pop').classList.add('hide');
+
+      // Feedback haptique & audio instantané
+      playSound('sent');
+      playHaptic('sent');
 
       if (t === '/clear' || t === '/new') {
         await startNewThread();
@@ -2556,6 +2899,18 @@
 
     $('#btn-clear-chat').onclick = startNewThread;
     if ($('#btn-new-th')) $('#btn-new-th').onclick = startNewThread;
+    if ($('#btn-bell')) $('#btn-bell').onclick = toggleBell;
+    updateBellUi();
+
+    if (soundEnabled && 'Notification' in window && Notification.permission === 'granted') {
+      setTimeout(() => subscribeToPush().catch(() => {}), 800);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && chatBusy) {
+        stopChat();
+      }
+    });
 
     /* Terminal xterm.js */
     const KEYS = { y: 'y', n: 'n', Esc: '\x1b', Tab: '\t', '↑': '\x1b[A', '↓': '\x1b[B', '⏎': '\r', 'Ctrl+C': '\x03' };
