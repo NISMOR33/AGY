@@ -4,6 +4,7 @@ options:
   deploymentTarget:
     iOS: 16.1
   xcodeVersion: '15.4'
+  objectVersion: 60
   generateEmptyDirectories: true
 
 settings:
